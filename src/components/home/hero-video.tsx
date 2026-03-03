@@ -5,13 +5,39 @@ import { Link } from "@/i18n/routing";
 import { ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { TextReveal } from "@/components/shared/animations";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 
 export function HeroVideo() {
   const t = useTranslations("hero");
   const video1Ref = useRef<HTMLVideoElement>(null);
   const video2Ref = useRef<HTMLVideoElement>(null);
   const [showSecondVideo, setShowSecondVideo] = useState(false);
+
+  // Force-play video 1 after React hydration (autoPlay attribute alone is unreliable)
+  useEffect(() => {
+    const video = video1Ref.current;
+    if (!video) return;
+
+    const tryPlay = () => {
+      video.muted = true;
+      video.play().catch(() => {
+        // Retry once after a short delay if initial play fails
+        setTimeout(() => {
+          video.muted = true;
+          video.play().catch(() => {});
+        }, 1000);
+      });
+    };
+
+    // If video is ready, play immediately; otherwise wait for it to load
+    if (video.readyState >= 3) {
+      tryPlay();
+    } else {
+      video.addEventListener("canplay", tryPlay, { once: true });
+    }
+
+    return () => video.removeEventListener("canplay", tryPlay);
+  }, []);
 
   const handleFirstVideoEnd = useCallback(() => {
     setShowSecondVideo(true);
@@ -37,6 +63,7 @@ export function HeroVideo() {
         autoPlay
         muted
         playsInline
+        preload="auto"
         onEnded={handleFirstVideoEnd}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1500 ${
           showSecondVideo ? "opacity-0" : "opacity-100"
