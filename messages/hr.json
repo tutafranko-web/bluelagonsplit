@@ -1,0 +1,187 @@
+{
+  "nav": {
+    "home": "Naslovna",
+    "about": "O nama",
+    "tours": "Izleti",
+    "privateTours": "Privatne ture",
+    "restaurant": "Restoran Skoy",
+    "gallery": "Galerija",
+    "pricing": "Cjenik",
+    "blog": "Blog",
+    "contact": "Kontakt",
+    "bookNow": "Rezerviraj"
+  },
+  "hero": {
+    "title": "Otkrijte čaroliju Jadrana",
+    "subtitle": "Nezaboravni jednodnevni izleti brodom iz Splita i Trogira",
+    "cta": "Pogledaj izlete",
+    "scrollDown": "Saznaj više"
+  },
+  "stats": {
+    "years": "Godina iskustva",
+    "reviews": "Recenzija",
+    "boats": "Premium broda",
+    "guests": "Zadovoljnih gostiju"
+  },
+  "tours": {
+    "sectionTitle": "Naši izleti",
+    "sectionSubtitle": "Odaberite svoju avanturu",
+    "duration": "Trajanje",
+    "from": "od",
+    "perPerson": "po osobi",
+    "viewDetails": "Pogledaj detalje",
+    "bookTour": "Rezerviraj izlet",
+    "hours": "sati",
+    "included": "Što je uključeno",
+    "notIncluded": "Nije uključeno",
+    "meetingPoint": "Mjesto okupljanja",
+    "importantInfo": "Važne informacije",
+    "itinerary": "Plan puta",
+    "reviews": "recenzija",
+    "cruising": "Krstarenje",
+    "stop": "Stanica",
+    "returnTo": "Povratak",
+    "splitTour": {
+      "name": "Plava laguna, plaža Borko i Šolta",
+      "tagline": "s hranom i pićima",
+      "description": "Istražite dragulje Splita i okolnih otoka na motornoj jahti Tamaris. Plovite do plaže Borkko na otoku Čiovu, Maslinice na otoku Šolti i Plave lagune na otoku Drveniku Velikom.",
+      "departure": "Split"
+    },
+    "trogirTour": {
+      "name": "Plava laguna i Šolta iz Trogira",
+      "tagline": "s ručkom i pićem",
+      "description": "Otkrijte Plavu lagunu i Maslinicu na krstarenju iz Trogira. Plivajte i ronite s maskom, istražite šarmantno selo Maslinicu i uživajte u tradicionalnom mediteranskom ručku.",
+      "departure": "Trogir"
+    }
+  },
+  "fleet": {
+    "sectionTitle": "Naša flota",
+    "sectionSubtitle": "Tri premium broda za savršen dan na moru",
+    "tamaris": {
+      "name": "M/Y Tamaris",
+      "description": "27-metarska motorna jahta s 3 palube, 2 klimatizirana salona, potpuno opremljenim barom i sunčanom terasom.",
+      "length": "27 m",
+      "decks": "3 palube",
+      "capacity": "150 gostiju",
+      "features": "Klima, Bar, Wi-Fi, Tuševi"
+    },
+    "lovor": {
+      "name": "M/Y Lovor",
+      "description": "27-metarska motorna jahta, sestra brodu Tamaris. Profesionalno ozvučenje i live DJ za sunset i večernja krstarenja.",
+      "length": "27 m",
+      "decks": "3 palube",
+      "capacity": "150 gostiju",
+      "features": "DJ, Sound System, Klima, Bar"
+    },
+    "solo": {
+      "name": "M/B Solo",
+      "description": "20-metarski drveni motorni brod sa sunčalištem, ozvučenjem i platformom za kupanje.",
+      "length": "20 m",
+      "capacity": "Grupni izleti",
+      "features": "Sunčalište, Ozvučenje, Wi-Fi"
+    }
+  },
+  "restaurant": {
+    "sectionTitle": "Restoran Skoy",
+    "sectionSubtitle": "Ručajte pod borovima u srcu Plave lagune",
+    "description": "Uživajte u tradicionalnom mediteranskom ručku u restoranu Skoy, smještenom pod stoljetnim borovima u Plavoj laguni. Svježa riba s roštilja, domaće vino i pogled na kristalno čisto more.",
+    "viewMore": "Saznaj više",
+    "menuTitle": "Jelovnik",
+    "menuComingSoon": "Detalji jelovnika uskoro"
+  },
+  "privateTours": {
+    "sectionTitle": "Privatne ture",
+    "sectionSubtitle": "Vjenčanja, eventi, team building i više",
+    "description": "Pretvorite naše brodove u vašu ekskluzivnu plovidbu. Idealno za vjenčanja, korporativne evente, team building ili posebne proslave.",
+    "weddings": "Vjenčanja",
+    "events": "Korporativni eventi",
+    "teamBuilding": "Team building",
+    "celebrations": "Posebne proslave",
+    "charterPricing": "Cijene chartera",
+    "pricingOnRequest": "Cijene na upit",
+    "contactForQuote": "Kontaktirajte nas za ponudu",
+    "foodDrink": "Hrana i piće",
+    "menuOnRequest": "Jelovnik na upit"
+  },
+  "testimonials": {
+    "sectionTitle": "Što kažu naši gosti",
+    "sectionSubtitle": "Recenzije s GetYourGuide platforme"
+  },
+  "platforms": {
+    "findUs": "Pronađite nas na"
+  },
+  "cta": {
+    "title": "Spremni za avanturu?",
+    "subtitle": "Rezervirajte svoj nezaboravni dan na Jadranu",
+    "button": "Rezerviraj sada"
+  },
+  "gallery": {
+    "sectionTitle": "Galerija",
+    "sectionSubtitle": "Uživajte u atmosferi naših izleta",
+    "all": "Sve",
+    "boat": "Brod",
+    "blueLagoon": "Plava laguna",
+    "beach": "Plaža",
+    "restaurantCat": "Restoran"
+  },
+  "about": {
+    "sectionTitle": "O nama",
+    "sectionSubtitle": "Više od 10 godina nezaboravnih iskustava na moru",
+    "story": "Max Nautica je vodeća kompanija za brodske izlete u Splitu i Trogiru. S više od 10 godina iskustva i tri premium broda, pružamo nezaboravne jednodnevne izlete do Plave lagune, otoka Šolte i najljepših skrivenih uvala Jadrana.",
+    "mission": "Naša misija je pružiti gostima autentično mediteransko iskustvo — od kristalno čistog mora i skrivenih plaža do tradicionalnog ručka pod borovima u Plavoj laguni."
+  },
+  "pricing": {
+    "sectionTitle": "Cjenik",
+    "sectionSubtitle": "Transparentne cijene bez skrivenih troškova",
+    "comparison": "Usporedba izleta",
+    "feature": "Značajka",
+    "charterTitle": "Charter cijene",
+    "charterOnRequest": "Za privatne ture i charter, kontaktirajte nas za individualnu ponudu."
+  },
+  "blog": {
+    "sectionTitle": "Blog",
+    "sectionSubtitle": "Novosti i savjeti za vaš odmor",
+    "readMore": "Čitaj više",
+    "viewAll": "Pogledaj sve objave"
+  },
+  "contact": {
+    "sectionTitle": "Kontakt",
+    "sectionSubtitle": "Javite nam se za sva pitanja",
+    "name": "Ime i prezime",
+    "email": "Email adresa",
+    "phone": "Telefon",
+    "subject": "Predmet",
+    "message": "Poruka",
+    "send": "Pošalji poruku",
+    "sending": "Šalje se...",
+    "success": "Poruka je uspješno poslana!",
+    "error": "Došlo je do greške. Pokušajte ponovo.",
+    "orCallUs": "Ili nas nazovite",
+    "followUs": "Pratite nas"
+  },
+  "chat": {
+    "greeting": "Dobrodošli! Ja sam Max Nautica asistent. Kako vam mogu pomoći s našim izletima?",
+    "placeholder": "Pitajte o izletima, cijenama, restoranu...",
+    "title": "Max Nautica Asistent",
+    "close": "Zatvori",
+    "limitReached": "Dosegnuli ste limit poruka. Nazovite nas na 091 111 11 54 za dodatne informacije."
+  },
+  "footer": {
+    "company": "Max Nautica",
+    "tagline": "Nezaboravni brodski izleti iz Splita i Trogira",
+    "quickLinks": "Brze poveznice",
+    "contactInfo": "Kontakt informacije",
+    "followUs": "Pratite nas",
+    "rights": "Sva prava pridržana."
+  },
+  "common": {
+    "learnMore": "Saznaj više",
+    "bookNow": "Rezerviraj sada",
+    "close": "Zatvori",
+    "back": "Natrag",
+    "next": "Dalje",
+    "previous": "Prethodno",
+    "loading": "Učitavanje...",
+    "eur": "EUR"
+  }
+}

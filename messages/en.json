@@ -1,0 +1,187 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "tours": "Tours",
+    "privateTours": "Private Tours",
+    "restaurant": "Restaurant Skoy",
+    "gallery": "Gallery",
+    "pricing": "Pricing",
+    "blog": "Blog",
+    "contact": "Contact",
+    "bookNow": "Book Now"
+  },
+  "hero": {
+    "title": "Discover the Magic of the Adriatic",
+    "subtitle": "Unforgettable full-day boat tours from Split and Trogir",
+    "cta": "View Tours",
+    "scrollDown": "Learn More"
+  },
+  "stats": {
+    "years": "Years of Experience",
+    "reviews": "Reviews",
+    "boats": "Premium Boats",
+    "guests": "Happy Guests"
+  },
+  "tours": {
+    "sectionTitle": "Our Tours",
+    "sectionSubtitle": "Choose your adventure",
+    "duration": "Duration",
+    "from": "from",
+    "perPerson": "per person",
+    "viewDetails": "View Details",
+    "bookTour": "Book Tour",
+    "hours": "hours",
+    "included": "What's Included",
+    "notIncluded": "Not Included",
+    "meetingPoint": "Meeting Point",
+    "importantInfo": "Important Information",
+    "itinerary": "Itinerary",
+    "reviews": "reviews",
+    "cruising": "Cruising",
+    "stop": "Stop",
+    "returnTo": "Return",
+    "splitTour": {
+      "name": "Blue Lagoon, Borkko Beach & Šolta",
+      "tagline": "with Food & Drinks",
+      "description": "Explore the gems of Split and surrounding islands aboard the motor yacht Tamaris. Sail to Borkko Beach on Čiovo island, Maslinica on Šolta island and the Blue Lagoon on Drvenik Veli.",
+      "departure": "Split"
+    },
+    "trogirTour": {
+      "name": "Blue Lagoon & Šolta from Trogir",
+      "tagline": "with Lunch & Drinks",
+      "description": "Discover the Blue Lagoon and Maslinica on a cruise from Trogir. Swim and snorkel, explore the charming village of Maslinica and enjoy a traditional Mediterranean lunch.",
+      "departure": "Trogir"
+    }
+  },
+  "fleet": {
+    "sectionTitle": "Our Fleet",
+    "sectionSubtitle": "Three premium boats for the perfect day at sea",
+    "tamaris": {
+      "name": "M/Y Tamaris",
+      "description": "27-meter motor yacht with 3 decks, 2 air-conditioned salons, a fully equipped bar and sun terrace.",
+      "length": "27 m",
+      "decks": "3 Decks",
+      "capacity": "150 Guests",
+      "features": "A/C, Bar, Wi-Fi, Showers"
+    },
+    "lovor": {
+      "name": "M/Y Lovor",
+      "description": "27-meter motor yacht, sister ship to Tamaris. Professional sound system and live DJ for sunset and evening cruises.",
+      "length": "27 m",
+      "decks": "3 Decks",
+      "capacity": "150 Guests",
+      "features": "DJ, Sound System, A/C, Bar"
+    },
+    "solo": {
+      "name": "M/B Solo",
+      "description": "20-meter wooden motor boat with sun deck, sound system and swimming platform.",
+      "length": "20 m",
+      "capacity": "Group Tours",
+      "features": "Sun Deck, Sound System, Wi-Fi"
+    }
+  },
+  "restaurant": {
+    "sectionTitle": "Restaurant Skoy",
+    "sectionSubtitle": "Dine under the pine trees in the heart of the Blue Lagoon",
+    "description": "Enjoy a traditional Mediterranean lunch at Restaurant Skoy, nestled under centuries-old pine trees in the Blue Lagoon. Fresh grilled fish, local wine and views of crystal-clear sea.",
+    "viewMore": "Learn More",
+    "menuTitle": "Menu",
+    "menuComingSoon": "Menu details coming soon"
+  },
+  "privateTours": {
+    "sectionTitle": "Private Tours",
+    "sectionSubtitle": "Weddings, events, team building and more",
+    "description": "Turn our boats into your exclusive cruise. Perfect for weddings, corporate events, team building or special celebrations.",
+    "weddings": "Weddings",
+    "events": "Corporate Events",
+    "teamBuilding": "Team Building",
+    "celebrations": "Special Celebrations",
+    "charterPricing": "Charter Pricing",
+    "pricingOnRequest": "Pricing on request",
+    "contactForQuote": "Contact us for a quote",
+    "foodDrink": "Food & Drinks",
+    "menuOnRequest": "Menu on request"
+  },
+  "testimonials": {
+    "sectionTitle": "What Our Guests Say",
+    "sectionSubtitle": "Reviews from GetYourGuide"
+  },
+  "platforms": {
+    "findUs": "Find Us On"
+  },
+  "cta": {
+    "title": "Ready for an Adventure?",
+    "subtitle": "Book your unforgettable day on the Adriatic",
+    "button": "Book Now"
+  },
+  "gallery": {
+    "sectionTitle": "Gallery",
+    "sectionSubtitle": "Experience the atmosphere of our tours",
+    "all": "All",
+    "boat": "Boat",
+    "blueLagoon": "Blue Lagoon",
+    "beach": "Beach",
+    "restaurantCat": "Restaurant"
+  },
+  "about": {
+    "sectionTitle": "About Us",
+    "sectionSubtitle": "Over 10 years of unforgettable experiences at sea",
+    "story": "Max Nautica is the leading boat tour company in Split and Trogir. With over 10 years of experience and three premium boats, we provide unforgettable full-day tours to the Blue Lagoon, Šolta island and the most beautiful hidden coves of the Adriatic.",
+    "mission": "Our mission is to provide guests with an authentic Mediterranean experience — from crystal-clear seas and hidden beaches to traditional lunch under the pine trees in the Blue Lagoon."
+  },
+  "pricing": {
+    "sectionTitle": "Pricing",
+    "sectionSubtitle": "Transparent pricing with no hidden costs",
+    "comparison": "Tour Comparison",
+    "feature": "Feature",
+    "charterTitle": "Charter Pricing",
+    "charterOnRequest": "For private tours and charter, contact us for a custom quote."
+  },
+  "blog": {
+    "sectionTitle": "Blog",
+    "sectionSubtitle": "News and tips for your vacation",
+    "readMore": "Read More",
+    "viewAll": "View all posts"
+  },
+  "contact": {
+    "sectionTitle": "Contact",
+    "sectionSubtitle": "Get in touch for any questions",
+    "name": "Full Name",
+    "email": "Email Address",
+    "phone": "Phone",
+    "subject": "Subject",
+    "message": "Message",
+    "send": "Send Message",
+    "sending": "Sending...",
+    "success": "Message sent successfully!",
+    "error": "An error occurred. Please try again.",
+    "orCallUs": "Or call us",
+    "followUs": "Follow us"
+  },
+  "chat": {
+    "greeting": "Welcome! I'm the Max Nautica assistant. How can I help you with our tours?",
+    "placeholder": "Ask about tours, prices, restaurant...",
+    "title": "Max Nautica Assistant",
+    "close": "Close",
+    "limitReached": "You've reached the message limit. Call us at 091 111 11 54 for more information."
+  },
+  "footer": {
+    "company": "Max Nautica",
+    "tagline": "Unforgettable boat tours from Split and Trogir",
+    "quickLinks": "Quick Links",
+    "contactInfo": "Contact Info",
+    "followUs": "Follow Us",
+    "rights": "All rights reserved."
+  },
+  "common": {
+    "learnMore": "Learn More",
+    "bookNow": "Book Now",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "loading": "Loading...",
+    "eur": "EUR"
+  }
+}
