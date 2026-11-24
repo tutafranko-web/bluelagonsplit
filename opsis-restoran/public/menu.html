@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meni</title>
+<style>
+  :root { --ink:#1b1f24; --muted:#5f6b76; --line:#e3e6ea; --accent:#0f5c8c; --bg:#f7f8fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; font: 16px/1.45 system-ui, sans-serif; color:var(--ink); background:var(--bg); padding-bottom: 90px; }
+  header { padding: 16px; background:#fff; border-bottom:1px solid var(--line); position: sticky; top:0; z-index:2; }
+  h1 { font-size: 20px; margin:0; } .sub { color:var(--muted); font-size: 14px; }
+  .langs { float:right; } .langs button { border:0; background:none; color:var(--muted); font: 13px system-ui; cursor:pointer; } .langs .on { color:var(--ink); font-weight:600; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing:.04em; color: var(--muted); margin: 22px 16px 8px; }
+  .item { background:#fff; margin: 0 12px 8px; padding: 12px; border:1px solid var(--line); border-radius: 10px; display:flex; gap: 10px; align-items: center; }
+  .item .info { flex:1; } .item .name { font-weight: 600; } .item .desc { color:var(--muted); font-size: 14px; }
+  .al { font-size: 12px; color: #8a5a00; } .price { font-weight:600; white-space:nowrap; }
+  .qty { display:flex; align-items:center; gap: 6px; } .qty button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background:#fff; font: 18px system-ui; cursor:pointer; }
+  footer { position: fixed; bottom: 0; left:0; right:0; background:#fff; border-top: 1px solid var(--line); padding: 10px 12px; display:flex; gap: 8px; }
+  footer button { flex:1; padding: 12px 8px; border-radius: 8px; border:1px solid var(--line); background:#fff; font: 600 14px system-ui; cursor:pointer; }
+  footer .main { background: var(--accent); color:#fff; border-color: var(--accent); flex: 1.6; }
+  .toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #1b1f24; color:#fff; padding: 10px 14px; border-radius: 8px; font-size: 14px; display:none; }
+  textarea { width: calc(100% - 24px); margin: 8px 12px; padding: 10px; border:1px solid var(--line); border-radius: 8px; font: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <div class="langs"><button data-l="hr">HR</button><button data-l="en">EN</button><button data-l="de">DE</button></div>
+  <h1 id="rname">…</h1><div class="sub" id="tbl"></div>
+</header>
+<div id="menu"></div>
+<textarea id="notes" rows="2"></textarea>
+<footer>
+  <button id="waiter"></button><button id="bill"></button><button class="main" id="order"></button>
+</footer>
+<div class="toast" id="toast"></div>
+<script>
+const I = {
+  hr: { table:'Stol', waiter:'Pozovi konobara', bill:'Račun', order:'Naruči', notes:'Napomena za kuhinju (alergije, bez luka…)', sent:'Poslano! Konobar stiže.', empty:'Odaberite jela.', allergens:'Alergeni', allergyNote:'Ako imate alergiju, recite konobaru.' },
+  en: { table:'Table', waiter:'Call waiter', bill:'Bill', order:'Order', notes:'Note for the kitchen (allergies, no onion…)', sent:'Sent! A waiter is on the way.', empty:'Choose some dishes first.', allergens:'Allergens', allergyNote:'If you have an allergy, please tell your waiter.' },
+  de: { table:'Tisch', waiter:'Kellner rufen', bill:'Rechnung', order:'Bestellen', notes:'Hinweis für die Küche (Allergien, ohne Zwiebel…)', sent:'Gesendet! Der Kellner kommt.', empty:'Bitte zuerst Gerichte wählen.', allergens:'Allergene', allergyNote:'Bei Allergien bitte den Kellner informieren.' },
+};
+const token = location.pathname.split('/').filter(Boolean)[1];
+let L = (navigator.language || 'hr').slice(0, 2); if (!I[L]) L = 'en';
+let data = null; const cart = new Map();
+const $ = (id) => document.getElementById(id);
+const eur = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
+const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const nm = (o) => esc((o && (o[L] || o.hr || o.en || Object.values(o)[0])) || '');
+function toast(t) { $('toast').textContent = t; $('toast').style.display = 'block'; setTimeout(() => $('toast').style.display = 'none', 2500); }
+function render() {
+  document.documentElement.lang = L;
+  document.querySelectorAll('.langs button').forEach((b) => b.classList.toggle('on', b.dataset.l === L));
+  $('waiter').textContent = I[L].waiter; $('bill').textContent = I[L].bill; $('notes').placeholder = I[L].notes;
+  const total = [...cart].reduce((s, [id, q]) => s + q * data.menu.find((m) => m.id === id).price_cents, 0);
+  $('order').textContent = I[L].order + (total ? ` · ${eur(total)}` : '');
+  $('rname').textContent = data.restaurant; $('tbl').textContent = `${I[L].table} ${data.table} · ${I[L].allergyNote}`;
+  const cats = [...new Set(data.menu.map((m) => m.category))];
+  $('menu').innerHTML = cats.map((c) => `<h2>${esc(c)}</h2>` + data.menu.filter((m) => m.category === c).map((m) => `
+    <div class="item"><div class="info"><div class="name">${nm(m.name)}</div>
+      ${nm(m.description) ? `<div class="desc">${nm(m.description)}</div>` : ''}
+      ${m.allergens.length ? `<div class="al">${I[L].allergens}: ${esc(m.allergens.join(', '))}</div>` : ''}
+      <div class="price">${eur(m.price_cents)}</div></div>
+      <div class="qty"><button data-id="${m.id}" data-d="-1">−</button><span>${cart.get(m.id) || 0}</span><button data-id="${m.id}" data-d="1">+</button></div>
+    </div>`).join('')).join('');
+  document.querySelectorAll('.qty button').forEach((b) => b.onclick = () => {
+    const id = Number(b.dataset.id), q = Math.max(0, Math.min(50, (cart.get(id) || 0) + Number(b.dataset.d)));
+    q ? cart.set(id, q) : cart.delete(id); render();
+  });
+}
+async function send(body) {
+  const r = await fetch(`/api/qr/${token}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json(); if (!r.ok) throw new Error(d.message); return d;
+}
+$('waiter').onclick = () => send({ kind: 'call_waiter' }).then(() => toast(I[L].sent)).catch((e) => toast(e.message));
+$('bill').onclick = () => send({ kind: 'request_bill' }).then(() => toast(I[L].sent)).catch((e) => toast(e.message));
+$('order').onclick = async () => {
+  if (!cart.size) return toast(I[L].empty);
+  try { await send({ items: [...cart].map(([menu_item_id, qty]) => ({ menu_item_id, qty })), notes: $('notes').value });
+    cart.clear(); $('notes').value = ''; render(); toast(I[L].sent);
+  } catch (e) { toast(e.message); }
+};
+document.querySelectorAll('.langs button').forEach((b) => b.onclick = () => { L = b.dataset.l; render(); });
+fetch(`/api/qr/${token}`).then((r) => r.json()).then((d) => { if (d.error) throw new Error(d.message); data = d; render(); })
+  .catch((e) => { document.body.textContent = e.message; });
+</script>
+</body>
+</html>

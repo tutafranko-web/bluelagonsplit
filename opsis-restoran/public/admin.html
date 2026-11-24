@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opsis Restoran — panel</title>
+<style>
+  :root { --ink:#1b1f24; --muted:#5f6b76; --line:#e3e6ea; --accent:#0f5c8c; --bg:#f4f6f8; --ok:#1f7a4d; --warn:#9a6700; --err:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 15px/1.45 system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  header { background:#fff; border-bottom:1px solid var(--line); padding: 10px 16px; display:flex; align-items:center; gap: 16px; flex-wrap: wrap; position: sticky; top:0; z-index: 3; }
+  header b { font-size: 16px; }
+  nav button { border:0; background:none; padding: 8px 10px; border-radius: 6px; cursor:pointer; font: 500 14px system-ui; color: var(--muted); }
+  nav button.on { background: var(--bg); color: var(--ink); }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  table { width:100%; border-collapse: collapse; } th, td { text-align:left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  input, select, textarea { padding: 8px 10px; border:1px solid var(--line); border-radius: 6px; font: inherit; background:#fff; }
+  button.b { padding: 7px 11px; border:1px solid var(--line); border-radius: 6px; background:#fff; cursor:pointer; font: 500 13px system-ui; margin: 1px; }
+  button.p { background: var(--accent); color:#fff; border-color: var(--accent); }
+  .tag { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg); }
+  .s-confirmed { background:#e6f0fa; } .s-seated { background:#e8f5ee; color: var(--ok); } .s-no_show { background:#fdecea; color: var(--err); }
+  .s-pending_guarantee { background:#fff4d6; color: var(--warn); } .s-cancelled, .s-expired, .s-completed { color: var(--muted); }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .grid label { display:flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 4px; }
+  .muted { color: var(--muted); font-size: 13px; } .hidden { display: none; }
+  .order { border-left: 4px solid var(--accent); } .order.call_waiter, .order.request_bill { border-left-color: var(--warn); }
+  #err { color: var(--err); }
+  .stats { display:flex; gap: 12px; flex-wrap: wrap; } .stat { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 130px; }
+  .stat b { display:block; font-size: 22px; }
+</style>
+</head>
+<body>
+<div id="login" class="hidden" style="max-width:360px;margin:80px auto">
+  <div class="card">
+    <h3>Prijava u panel</h3>
+    <p class="muted">Upišite oznaku restorana i ključ koji ste dobili.</p>
+    <p><input id="lSlug" placeholder="oznaka, npr. konoba-test" style="width:100%"></p>
+    <p><input id="lKey" type="password" placeholder="ključ" style="width:100%"></p>
+    <button class="b p" id="lGo">Prijava</button> <span id="lErr" class="muted"></span>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <b id="hName">…</b>
+  <nav>
+    <button data-tab="res" class="on">Rezervacije</button>
+    <button data-tab="orders">Narudžbe <span id="ordCount" class="tag"></span></button>
+    <button data-tab="menu">Meni</button>
+    <button data-tab="tables">Stolovi i QR</button>
+    <button data-tab="settings">Postavke</button>
+    <button data-tab="stats">Statistika</button>
+  </nav>
+  <span style="flex:1"></span><button class="b" id="logout">Odjava</button>
+</header>
+<main>
+  <div id="err"></div>
+
+  <section data-p="res">
+    <div class="card">
+      <input type="date" id="rDate"> <button class="b" id="rPrev">◀</button><button class="b" id="rToday">Danas</button><button class="b" id="rNext">▶</button>
+      <span class="muted" id="rSum" style="margin-left:10px"></span>
+    </div>
+    <div class="card"><table><thead><tr><th>Vrijeme</th><th>Gost</th><th>Os.</th><th>Stol</th><th>Izvor</th><th>Status</th><th>Napomena</th><th></th></tr></thead><tbody id="rList"></tbody></table></div>
+    <div class="card">
+      <b>Nova rezervacija (telefon / uživo)</b>
+      <div class="grid" style="margin-top:8px">
+        <label>Ime<input id="nName"></label><label>Mobitel<input id="nPhone"></label><label>Email<input id="nEmail"></label>
+        <label>Datum<input type="date" id="nDate"></label><label>Vrijeme<input type="time" id="nTime" step="900"></label>
+        <label>Osoba<input type="number" id="nParty" value="2" min="1"></label><label>Zona<input id="nZone" placeholder="svejedno"></label>
+        <label>Napomena<input id="nNotes"></label>
+      </div>
+      <p><button class="b p" id="nSave">Spremi</button> <span id="nMsg" class="muted"></span></p>
+    </div>
+  </section>
+
+  <section data-p="orders" class="hidden">
+    <p class="muted">Osvježava se svakih 10 sekundi. Nova narudžba = zvučni signal.</p>
+    <div id="oList"></div>
+  </section>
+
+  <section data-p="menu" class="hidden">
+    <div class="card"><table><thead><tr><th>Kategorija</th><th>Naziv</th><th>Cijena</th><th>PDV</th><th>Alergeni</th><th>Dostupno</th></tr></thead><tbody id="mList"></tbody></table></div>
+    <div class="card">
+      <b>Dodaj jelo / piće</b>
+      <div class="grid" style="margin-top:8px">
+        <label>Kategorija<input id="mCat"></label><label>Naziv (HR)<input id="mHr"></label><label>Naziv (EN)<input id="mEn"></label><label>Naziv (DE)<input id="mDe"></label>
+        <label>Cijena €<input id="mPrice" type="number" step="0.01"></label><label>PDV %<select id="mVat"><option>13</option><option>25</option><option>5</option></select></label>
+        <label>Alergeni (zarezom)<input id="mAl" placeholder="gluten, mlijeko"></label>
+      </div>
+      <p class="muted">Dozvoljeni alergeni: gluten, rakovi, jaja, riba, kikiriki, soja, mlijeko, orašasti plodovi, celer, gorušica, sezam, sumpor, lupina, mekušci</p>
+      <p><button class="b p" id="mSave">Dodaj</button> <span id="mMsg" class="muted"></span></p>
+    </div>
+  </section>
+
+  <section data-p="tables" class="hidden">
+    <div class="card"><table><thead><tr><th>Stol</th><th>Zona</th><th>Kapacitet</th><th>Aktivan</th><th>QR meni link</th></tr></thead><tbody id="tList"></tbody></table></div>
+    <div class="card">
+      <b>Dodaj stol</b>
+      <div class="grid" style="margin-top:8px">
+        <label>Oznaka<input id="tLabel"></label><label>Zona<input id="tZone" value="unutra"></label>
+        <label>Min. osoba<input id="tMin" type="number" value="1"></label><label>Maks. osoba<input id="tMax" type="number" value="4"></label>
+      </div>
+      <p><button class="b p" id="tSave">Dodaj</button> <span id="tMsg" class="muted"></span></p>
+    </div>
+    <div class="card"><b>Za web restorana</b>
+      <p class="muted">Gumb za rezervaciju:</p><pre id="snipBook" style="white-space:pre-wrap"></pre>
+      <p class="muted">AI chat:</p><pre id="snipChat" style="white-space:pre-wrap"></pre>
+      <p class="muted">Link za Google profil / Instagram:</p><pre id="snipLink"></pre>
+    </div>
+  </section>
+
+  <section data-p="settings" class="hidden">
+    <div class="card">
+      <div class="grid">
+        <label>Naziv<input id="sName"></label><label>Telefon<input id="sPhone"></label><label>Email<input id="sEmail"></label><label>Adresa<input id="sAddress"></label>
+        <label>Termin svakih (min)<input id="sSlot" type="number"></label><label>Trajanje stola (min)<input id="sDur" type="number"></label>
+        <label>Maks. osoba online<input id="sMax" type="number"></label>
+        <label>Garancija karticom<select id="sGuar"><option value="none">Ne</option><option value="card">Da</option></select></label>
+        <label>Garancija od (osoba)<input id="sGuarMin" type="number"></label><label>No-show po osobi (€)<input id="sFee" type="number" step="0.01"></label>
+      </div>
+      <p><label class="muted">Radno vrijeme — jedan red po periodu: dan(1=pon…7=ned) od do, npr. <code>1 12:00 23:00</code></label><textarea id="sHours" rows="8" style="width:100%"></textarea></p>
+      <p><label class="muted">Zatvoreni datumi (jedan po redu, GGGG-MM-DD)</label><textarea id="sClosed" rows="3" style="width:100%"></textarea></p>
+      <p><label class="muted">Link za Google recenziju</label><input id="sReview" style="width:100%"></p>
+      <p><label class="muted">Upit za recenziju gostima</label>
+        <select id="sReviewMode"><option value="approval">Konobar odobrava za svakog gosta</option><option value="auto">Šalji automatski svima koji su bili</option><option value="off">Ne šalji</option></select></p>
+      <p><label class="muted">Informacije za AI asistenta (parking, ljubimci, dječja stolica, vegansko…)</label><textarea id="sInfo" rows="5" style="width:100%"></textarea></p>
+      <p class="muted" id="sConn"></p>
+      <button class="b p" id="sSave">Spremi postavke</button> <span id="sMsg" class="muted"></span>
+    </div>
+  </section>
+
+  <section data-p="stats" class="hidden">
+    <div class="stats" id="stCards"></div>
+    <div class="card"><table><thead><tr><th>Izvor</th><th>Status</th><th>Rezervacija</th><th>Gostiju</th></tr></thead><tbody id="stList"></tbody></table><p class="muted">Zadnjih 30 dana.</p></div>
+  </section>
+</main>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const eur = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
+let S = JSON.parse(localStorage.getItem('opsis-admin') || 'null');
+let SET = null; // postavke restorana
+const STATUS = { pending_guarantee:'čeka karticu', confirmed:'potvrđeno', seated:'sjede', completed:'završeno', cancelled:'otkazano', no_show:'nije došao', expired:'isteklo' };
+const SOURCE = { web:'web', chat:'chat', whatsapp:'WhatsApp', instagram:'Instagram', voice:'telefon AI', admin:'osoblje' };
+const tz = 'Europe/Zagreb';
+const localTime = (iso) => new Date(iso).toLocaleTimeString('hr-HR', { hour:'2-digit', minute:'2-digit', timeZone: tz });
+const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: tz });
+
+async function api(path, opts = {}) {
+  const r = await fetch(`/api/admin/${S.slug}${path}`, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.key } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401) { logout(); throw new Error('Neispravan ključ'); }
+  if (!r.ok) throw new Error(d.message || 'Greška');
+  return d;
+}
+function logout() { localStorage.removeItem('opsis-admin'); S = null; $('app').classList.add('hidden'); $('login').classList.remove('hidden'); }
+$('logout').onclick = logout;
+$('lGo').onclick = async () => {
+  S = { slug: $('lSlug').value.trim(), key: $('lKey').value.trim() };
+  try { await api('/settings'); localStorage.setItem('opsis-admin', JSON.stringify(S)); start(); }
+  catch (e) { $('lErr').textContent = e.message; S = null; }
+};
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section[data-p]').forEach((s) => s.classList.toggle('hidden', s.dataset.p !== b.dataset.tab));
+  ({ res: loadRes, orders: loadOrders, menu: loadMenu, tables: loadTables, settings: loadSettings, stats: loadStats })[b.dataset.tab]();
+});
+const guard = (fn) => async (...a) => { $('err').textContent = ''; try { await fn(...a); } catch (e) { $('err').textContent = e.message; } };
+
+// ---- rezervacije ----
+const loadRes = guard(async () => {
+  const d = await api(`/reservations?date=${$('rDate').value}`);
+  const active = d.reservations.filter((r) => ['confirmed', 'seated', 'pending_guarantee'].includes(r.status));
+  $('rSum').textContent = `${active.length} rezervacija · ${active.reduce((s, r) => s + r.party_size, 0)} gostiju`;
+  $('rList').innerHTML = d.reservations.map((r) => `<tr>
+    <td><b>${localTime(r.start_at)}</b></td>
+    <td>${esc(r.guest_name)}<div class="muted">${esc(r.guest_phone || r.guest_email || '')}${r.visits ? ` · ${r.visits}× bio` : ''}${r.no_shows ? ` · <span style="color:var(--err)">${r.no_shows}× nije došao</span>` : ''}</div></td>
+    <td>${r.party_size}</td><td>${esc(r.table_label || '')}<div class="muted">${esc(r.zone || '')}</div></td>
+    <td>${SOURCE[r.source] || esc(r.source)}</td>
+    <td><span class="tag s-${r.status}">${STATUS[r.status] || r.status}</span><div class="muted">${r.code}</div></td>
+    <td>${esc(r.notes)}</td>
+    <td>${['confirmed', 'pending_guarantee'].includes(r.status) ? `<button class="b" data-s="seated" data-id="${r.id}">Sjeli</button><button class="b" data-s="no_show" data-id="${r.id}">Nije došao</button><button class="b" data-c="${r.code}">Otkaži</button>` : ''}
+        ${r.status === 'seated' ? `<button class="b" data-s="completed" data-id="${r.id}">Završeno</button>` : ''}
+        ${reviewCell(r)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Nema rezervacija.</td></tr>';
+  $('rList').querySelectorAll('[data-s]').forEach((b) => b.onclick = guard(async () => {
+    if (b.dataset.s === 'no_show' && !confirm('Označiti kao nedolazak? Ako postoji garancija, naplatit će se.')) return;
+    await api(`/reservations/${b.dataset.id}/status`, { method: 'POST', body: JSON.stringify({ status: b.dataset.s }) }); loadRes();
+  }));
+  $('rList').querySelectorAll('[data-rv]').forEach((b) => b.onclick = guard(async () => {
+    await api(`/reservations/${b.dataset.id}/review`, { method: 'POST', body: JSON.stringify({ approve: b.dataset.rv === '1' }) }); loadRes();
+  }));
+  $('rList').querySelectorAll('[data-c]').forEach((b) => b.onclick = guard(async () => {
+    if (!confirm('Otkazati rezervaciju? Gost dobiva obavijest.')) return;
+    await api(`/reservations/${b.dataset.c}/cancel`, { method: 'POST', body: '{}' }); loadRes();
+  }));
+});
+// upit za Google recenziju: konobar odobrava (review_mode = approval)
+function reviewCell(r) {
+  if (!['seated', 'completed'].includes(r.status) || !SET || SET.review_mode === 'off' || !SET.google_review_url) return '';
+  if (r.review_request_sent_at) return '<div class="muted">⭐ upit za recenziju poslan</div>';
+  if (r.review_decision === 'declined') return `<div class="muted">bez recenzije <button class="b" data-rv="1" data-id="${r.id}">Ipak pošalji</button></div>`;
+  if (r.review_decision === 'approved') return `<div class="muted">⭐ odobreno, šalje se 2 h nakon posjeta <button class="b" data-rv="0" data-id="${r.id}">Poništi</button></div>`;
+  if (SET.review_mode === 'auto') return `<div class="muted">⭐ šalje se automatski <button class="b" data-rv="0" data-id="${r.id}">Ne šalji</button></div>`;
+  return `<div><button class="b p" data-rv="1" data-id="${r.id}">⭐ Traži recenziju</button><button class="b" data-rv="0" data-id="${r.id}">Ne</button></div>`;
+}
+const shiftDay = (n) => { const d = new Date($('rDate').value + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); $('rDate').value = d.toISOString().slice(0, 10); loadRes(); };
+$('rPrev').onclick = () => shiftDay(-1); $('rNext').onclick = () => shiftDay(1); $('rToday').onclick = () => { $('rDate').value = todayStr(); loadRes(); };
+$('rDate').onchange = loadRes;
+$('nSave').onclick = guard(async () => {
+  $('nMsg').textContent = '';
+  try {
+    const r = await api('/reservations', { method: 'POST', body: JSON.stringify({
+      name: $('nName').value, phone: $('nPhone').value, email: $('nEmail').value, date: $('nDate').value, time: $('nTime').value,
+      partySize: Number($('nParty').value), zone: $('nZone').value || undefined, notes: $('nNotes').value }) });
+    $('nMsg').textContent = `Spremljeno, šifra ${r.code}`; ['nName', 'nPhone', 'nEmail', 'nNotes'].forEach((id) => $(id).value = '');
+    $('rDate').value = $('nDate').value; loadRes();
+  } catch (e) { $('nMsg').textContent = e.message; }
+});
+
+// ---- narudžbe ----
+let seenOrders = new Set(), firstLoad = true;
+function beep() { try { const c = new AudioContext(), o = c.createOscillator(); o.connect(c.destination); o.frequency.value = 880; o.start(); o.stop(c.currentTime + 0.25); } catch {} }
+const loadOrders = guard(async () => {
+  const list = await api('/orders');
+  $('ordCount').textContent = list.length || '';
+  if (!firstLoad && list.some((o) => !seenOrders.has(o.id))) beep();
+  firstLoad = false; seenOrders = new Set(list.map((o) => o.id));
+  const KIND = { order: 'Narudžba', call_waiter: 'Zove konobara', request_bill: 'Traži račun' };
+  $('oList').innerHTML = list.map((o) => `<div class="card order ${o.kind}">
+    <b>Stol ${esc(o.table_label)}</b> · ${KIND[o.kind]} · <span class="muted">${localTime(o.created_at)}</span> · <span class="tag">${o.status === 'new' ? 'novo' : 'prihvaćeno'}</span>
+    ${o.items.length ? `<ul>${o.items.map((i) => `<li>${i.qty}× ${esc(i.name)}</li>`).join('')}</ul><div>Ukupno ${eur(o.total_cents)}</div>` : ''}
+    ${o.notes ? `<p><i>${esc(o.notes)}</i></p>` : ''}
+    <p>${o.status === 'new' ? `<button class="b p" data-o="${o.id}" data-s="accepted">Prihvati</button>` : ''}
+       <button class="b" data-o="${o.id}" data-s="served">${o.kind === 'order' ? 'Posluženo' : 'Riješeno'}</button>
+       <button class="b" data-o="${o.id}" data-s="cancelled">Poništi</button></p></div>`).join('') || '<p class="muted">Nema otvorenih narudžbi.</p>';
+  $('oList').querySelectorAll('[data-o]').forEach((b) => b.onclick = guard(async () => {
+    await api(`/orders/${b.dataset.o}/status`, { method: 'POST', body: JSON.stringify({ status: b.dataset.s }) }); loadOrders();
+  }));
+});
+
+// ---- meni ----
+const loadMenu = guard(async () => {
+  const list = await api('/menu');
+  $('mList').innerHTML = list.map((m) => `<tr><td>${esc(m.category)}</td><td>${esc(m.name.hr || m.name.en)}</td><td>${eur(m.price_cents)}</td><td>${m.vat_rate}%</td>
+    <td>${esc(m.allergens.join(', '))}</td><td><input type="checkbox" data-m="${m.id}" ${m.available ? 'checked' : ''}></td></tr>`).join('');
+  $('mList').querySelectorAll('[data-m]').forEach((cb) => cb.onchange = guard(async () => {
+    const m = list.find((x) => x.id === Number(cb.dataset.m));
+    await api(`/menu/${m.id}`, { method: 'PUT', body: JSON.stringify({ ...m, vat_rate: Number(m.vat_rate), available: cb.checked }) });
+  }));
+});
+$('mSave').onclick = guard(async () => {
+  $('mMsg').textContent = '';
+  const name = { hr: $('mHr').value.trim() }; if ($('mEn').value.trim()) name.en = $('mEn').value.trim(); if ($('mDe').value.trim()) name.de = $('mDe').value.trim();
+  try {
+    await api('/menu', { method: 'POST', body: JSON.stringify({ category: $('mCat').value, name, price_cents: Math.round(Number($('mPrice').value) * 100),
+      vat_rate: Number($('mVat').value), allergens: $('mAl').value.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean) }) });
+    ['mHr', 'mEn', 'mDe', 'mPrice', 'mAl'].forEach((id) => $(id).value = ''); $('mMsg').textContent = 'Dodano.'; loadMenu();
+  } catch (e) { $('mMsg').textContent = e.message; }
+});
+
+// ---- stolovi ----
+const loadTables = guard(async () => {
+  const list = await api('/tables');
+  $('tList').innerHTML = list.map((t) => `<tr><td>${esc(t.label)}</td><td>${esc(t.zone)}</td><td>${t.min_capacity}–${t.max_capacity}</td>
+    <td><input type="checkbox" data-t="${t.id}" ${t.active ? 'checked' : ''}></td><td><a href="/m/${t.qr_token}" target="_blank">${location.origin}/m/${t.qr_token}</a></td></tr>`).join('');
+  $('tList').querySelectorAll('[data-t]').forEach((cb) => cb.onchange = guard(() => api(`/tables/${cb.dataset.t}`, { method: 'PUT', body: JSON.stringify({ active: cb.checked }) })));
+  $('snipBook').textContent = `<script src="${location.origin}/widget.js" data-restaurant="${S.slug}" async><\/script>`;
+  $('snipChat').textContent = `<script src="${location.origin}/chat.js" data-restaurant="${S.slug}" async><\/script>`;
+  $('snipLink').textContent = `${location.origin}/b/${S.slug}`;
+});
+$('tSave').onclick = guard(async () => {
+  try { await api('/tables', { method: 'POST', body: JSON.stringify({ label: $('tLabel').value, zone: $('tZone').value, min_capacity: Number($('tMin').value), max_capacity: Number($('tMax').value) }) });
+    $('tLabel').value = ''; $('tMsg').textContent = 'Dodano.'; loadTables();
+  } catch (e) { $('tMsg').textContent = e.message; }
+});
+
+// ---- postavke ----
+const loadSettings = guard(async () => {
+  const s = await api('/settings'); SET = s;
+  $('hName').textContent = s.name;
+  $('sName').value = s.name; $('sPhone').value = s.phone || ''; $('sEmail').value = s.email || ''; $('sAddress').value = s.address || '';
+  $('sSlot').value = s.slot_minutes; $('sDur').value = s.default_duration_minutes; $('sMax').value = s.max_party_size;
+  $('sGuar').value = s.guarantee_mode; $('sGuarMin').value = s.guarantee_min_party; $('sFee').value = (s.no_show_fee_cents / 100).toFixed(2);
+  $('sHours').value = s.opening_hours.map((p) => `${p.weekday} ${p.open} ${p.close}`).join('\n');
+  $('sClosed').value = s.closed_dates.join('\n'); $('sReview').value = s.google_review_url || ''; $('sReviewMode').value = s.review_mode; $('sInfo').value = s.info_text || '';
+  $('sConn').textContent = `Stripe: ${s.stripe_connected ? 'spojen' : 'nije spojen'} · WhatsApp: ${s.whatsapp_connected ? 'spojen' : 'nije spojen'} · Fiskalizacija: ${s.fiscal_enabled ? 'uključena' : 'isključena'}`;
+});
+$('sSave').onclick = guard(async () => {
+  $('sMsg').textContent = '';
+  try {
+    const hours = $('sHours').value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [d, o, c] = l.split(/\s+/); return { weekday: Number(d), open: o, close: c }; });
+    await api('/settings', { method: 'PUT', body: JSON.stringify({
+      name: $('sName').value, phone: $('sPhone').value, email: $('sEmail').value, address: $('sAddress').value,
+      slot_minutes: Number($('sSlot').value), default_duration_minutes: Number($('sDur').value), max_party_size: Number($('sMax').value),
+      guarantee_mode: $('sGuar').value, guarantee_min_party: Number($('sGuarMin').value), no_show_fee_cents: Math.round(Number($('sFee').value) * 100),
+      opening_hours: hours, closed_dates: $('sClosed').value.split('\n').map((s) => s.trim()).filter(Boolean),
+      google_review_url: $('sReview').value || null, review_mode: $('sReviewMode').value, info_text: $('sInfo').value }) });
+    $('sMsg').textContent = 'Spremljeno.'; loadSettings();
+  } catch (e) { $('sMsg').textContent = e.message; }
+});
+
+// ---- statistika ----
+const loadStats = guard(async () => {
+  const d = await api('/stats');
+  const sum = (f) => d.rows.filter(f).reduce((s, r) => s + r.n, 0);
+  const ai = sum((r) => ['chat', 'whatsapp', 'instagram', 'voice'].includes(r.source) && !['cancelled', 'expired'].includes(r.status));
+  const total = sum((r) => !['cancelled', 'expired'].includes(r.status));
+  const ns = sum((r) => r.status === 'no_show');
+  $('stCards').innerHTML = `<div class="stat">Rezervacija<b>${total}</b></div><div class="stat">Preko AI-ja<b>${ai}</b></div><div class="stat">Telefon AI<b>${sum((r) => r.source === 'voice')}</b></div><div class="stat">Nedolazaka<b>${ns}</b></div>`;
+  $('stList').innerHTML = d.rows.map((r) => `<tr><td>${SOURCE[r.source] || esc(r.source)}</td><td>${STATUS[r.status] || r.status}</td><td>${r.n}</td><td>${r.covers}</td></tr>`).join('');
+});
+
+function start() {
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('rDate').value = todayStr(); $('nDate').value = todayStr();
+  loadSettings().then(loadRes); loadOrders();
+  setInterval(() => S && loadOrders(), 10_000);
+}
+if (S) start(); else $('login').classList.remove('hidden');
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rezervacija</title>
+<style>
+  :root { --ink:#1b1f24; --muted:#5f6b76; --line:#dfe3e8; --accent:#0f5c8c; --bg:#f7f8fa; --ok:#1f7a4d; --err:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 22px; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  label { display:block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width:100%; padding: 10px 12px; border:1px solid var(--line); border-radius: 8px; font: inherit; background:#fff; }
+  .row { display:flex; gap: 10px; } .row > * { flex:1; }
+  .slots { display:flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .slot { padding: 8px 12px; border:1px solid var(--line); border-radius: 8px; background:#fff; cursor:pointer; font: inherit; }
+  .slot.sel { border-color: var(--accent); background: var(--accent); color:#fff; }
+  button.primary { width:100%; margin-top: 14px; padding: 12px; border:0; border-radius: 8px; background: var(--accent); color:#fff; font: 600 16px system-ui; cursor:pointer; }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  .msg { padding: 10px 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; }
+  .msg.err { background:#fdecea; color: var(--err); } .msg.ok { background:#e8f5ee; color: var(--ok); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .hp { position:absolute; left:-9999px; }
+  .langs { float:right; } .langs button { border:0; background:none; color:var(--muted); cursor:pointer; font: 13px system-ui; }
+  .langs button.on { color: var(--ink); font-weight: 600; }
+  .code { font: 700 26px ui-monospace, monospace; letter-spacing: 3px; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="langs"><button data-l="hr">HR</button><button data-l="en">EN</button><button data-l="de">DE</button></div>
+  <h1 id="rname">…</h1>
+  <div class="sub" id="raddr"></div>
+
+  <section id="book">
+    <div class="card">
+      <div class="row">
+        <div><label data-t="date"></label><input type="date" id="date"></div>
+        <div><label data-t="guests"></label><select id="party"></select></div>
+      </div>
+      <div id="zoneWrap"><label data-t="zone"></label><select id="zone"></select></div>
+      <label data-t="time"></label>
+      <div class="slots" id="slots"></div>
+      <div class="muted" id="slotsInfo"></div>
+    </div>
+
+    <div class="card hidden" id="details">
+      <label data-t="name"></label><input id="name" autocomplete="name">
+      <label data-t="phone"></label><input id="phone" type="tel" autocomplete="tel" placeholder="+385 91 …">
+      <label data-t="email"></label><input id="email" type="email" autocomplete="email">
+      <label data-t="notes"></label><textarea id="notes" rows="2"></textarea>
+      <input class="hp" id="website" tabindex="-1" autocomplete="off">
+      <div class="muted" id="guaranteeInfo"></div>
+      <button class="primary" id="submit" data-t="book"></button>
+      <div id="bookMsg"></div>
+      <p class="muted" data-t="privacy"></p>
+    </div>
+  </section>
+
+  <section id="done" class="hidden card">
+    <div class="msg ok" data-t="confirmed"></div>
+    <p data-t="yourCode"></p>
+    <div class="code" id="doneCode"></div>
+    <p class="muted" id="doneWhen"></p>
+  </section>
+
+  <section id="manage" class="hidden card">
+    <p><span data-t="reservation"></span> <b id="mCode"></b></p>
+    <div id="mAsk">
+      <label data-t="contactCheck"></label><input id="mContact">
+      <button class="primary" id="mLoad" data-t="show"></button>
+    </div>
+    <div id="mInfo" class="hidden">
+      <p id="mWhen"></p>
+      <button class="primary" id="mCancel" data-t="cancel"></button>
+    </div>
+    <div id="mMsg"></div>
+  </section>
+</main>
+<script>
+const I18N = {
+  hr: { date:'Datum', guests:'Broj osoba', zone:'Gdje želite sjediti', any:'Svejedno', time:'Vrijeme', name:'Ime i prezime', phone:'Mobitel (za potvrdu na WhatsApp)', email:'Email', notes:'Napomena (alergije, prigoda…)', book:'Rezerviraj', confirmed:'Rezervacija je potvrđena. Potvrdu smo vam poslali porukom.', yourCode:'Vaša šifra rezervacije:', reservation:'Rezervacija', contactCheck:'Za pregled upišite mobitel ili email s rezervacije', show:'Prikaži', cancel:'Otkaži rezervaciju', cancelled:'Rezervacija je otkazana.', noSlots:'Nema slobodnih termina za taj dan. Probajte drugi datum ili nas nazovite.', pick:'Odaberite vrijeme', privacy:'Podatke koristimo samo za vašu rezervaciju.', needContact:'Upišite mobitel ili email.', closedDay:'Taj dan ne radimo.', guarantee:'Za {n}+ osoba tražimo karticu kao garanciju; nedolazak se naplaćuje {fee} po osobi.', redirect:'Preusmjeravamo vas na unos kartice…', guaranteeOk:'Kartica je spremljena, rezervacija potvrđena.', persons:'os.' },
+  en: { date:'Date', guests:'Guests', zone:'Seating', any:'No preference', time:'Time', name:'Full name', phone:'Mobile (for WhatsApp confirmation)', email:'Email', notes:'Notes (allergies, occasion…)', book:'Book table', confirmed:'Your table is confirmed. We have sent you a confirmation.', yourCode:'Your booking code:', reservation:'Booking', contactCheck:'Enter the mobile or email used for the booking', show:'Show', cancel:'Cancel booking', cancelled:'Your booking has been cancelled.', noSlots:'No tables available that day. Try another date or call us.', pick:'Choose a time', privacy:'We use your data only for this booking.', needContact:'Please enter a mobile number or email.', closedDay:'We are closed that day.', guarantee:'For {n}+ guests we ask for a card guarantee; a no-show fee of {fee} per person applies.', redirect:'Redirecting you to enter your card…', guaranteeOk:'Card saved, booking confirmed.', persons:'guests' },
+  de: { date:'Datum', guests:'Personen', zone:'Sitzplatz', any:'Egal', time:'Uhrzeit', name:'Vor- und Nachname', phone:'Handy (für WhatsApp-Bestätigung)', email:'E-Mail', notes:'Hinweise (Allergien, Anlass…)', book:'Reservieren', confirmed:'Ihre Reservierung ist bestätigt. Wir haben Ihnen eine Bestätigung geschickt.', yourCode:'Ihr Reservierungscode:', reservation:'Reservierung', contactCheck:'Handy oder E-Mail der Reservierung eingeben', show:'Anzeigen', cancel:'Reservierung stornieren', cancelled:'Ihre Reservierung wurde storniert.', noSlots:'An diesem Tag ist nichts frei. Bitte anderes Datum wählen oder anrufen.', pick:'Uhrzeit wählen', privacy:'Wir verwenden Ihre Daten nur für diese Reservierung.', needContact:'Bitte Handy oder E-Mail angeben.', closedDay:'An diesem Tag geschlossen.', guarantee:'Ab {n} Personen benötigen wir eine Kreditkarte als Garantie; bei Nichterscheinen {fee} pro Person.', redirect:'Weiterleitung zur Karteneingabe…', guaranteeOk:'Karte gespeichert, Reservierung bestätigt.', persons:'Pers.' },
+};
+const slug = location.pathname.split('/').filter(Boolean)[1];
+const q = new URLSearchParams(location.search);
+let L = (q.get('lang') || navigator.language || 'hr').slice(0, 2); if (!I18N[L]) L = 'en';
+let R = null, chosen = null;
+const $ = (id) => document.getElementById(id);
+const t = (k) => I18N[L][k] || k;
+function applyLang() {
+  document.documentElement.lang = L;
+  document.querySelectorAll('[data-t]').forEach((el) => el.textContent = t(el.dataset.t));
+  document.querySelectorAll('.langs button').forEach((b) => b.classList.toggle('on', b.dataset.l === L));
+  if (R) renderGuarantee();
+}
+document.querySelectorAll('.langs button').forEach((b) => b.onclick = () => { L = b.dataset.l; applyLang(); fillZones(); });
+function msg(el, text, ok) { $(el).innerHTML = text ? `<div class="msg ${ok ? 'ok' : 'err'}">${text.replace(/</g,'&lt;')}</div>` : ''; }
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json' } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.message || 'Greška'), data);
+  return data;
+}
+function fillZones() {
+  if (!R) return;
+  $('zoneWrap').classList.toggle('hidden', R.zones.length < 2);
+  $('zone').innerHTML = `<option value="">${t('any')}</option>` + R.zones.map((z) => `<option>${String(z).replace(/</g,'&lt;')}</option>`).join('');
+}
+function renderGuarantee() {
+  const g = R.guarantee, n = Number($('party').value);
+  $('guaranteeInfo').textContent = g && n >= g.min_party ? t('guarantee').replace('{n}', g.min_party).replace('{fee}', (g.fee_cents / 100).toFixed(2).replace('.', ',') + ' €') : '';
+}
+async function loadSlots() {
+  chosen = null; $('details').classList.add('hidden'); $('slots').innerHTML = ''; $('slotsInfo').textContent = '…';
+  renderGuarantee();
+  try {
+    const d = await api(`/api/r/${slug}/availability?date=${$('date').value}&party=${$('party').value}&zone=${encodeURIComponent($('zone').value)}`);
+    $('slotsInfo').textContent = d.slots.length ? '' : (R.closed_dates.includes($('date').value) ? t('closedDay') : t('noSlots'));
+    for (const s of d.slots) {
+      const b = document.createElement('button'); b.className = 'slot'; b.textContent = s.time;
+      b.onclick = () => { chosen = s; document.querySelectorAll('.slot').forEach((x) => x.classList.remove('sel')); b.classList.add('sel'); $('details').classList.remove('hidden'); };
+      $('slots').appendChild(b);
+    }
+  } catch (e) { $('slotsInfo').textContent = e.message; }
+}
+async function submit() {
+  msg('bookMsg', '');
+  if (!chosen) return msg('bookMsg', t('pick'));
+  if (!$('phone').value.trim() && !$('email').value.trim()) return msg('bookMsg', t('needContact'));
+  $('submit').disabled = true;
+  try {
+    const d = await api(`/api/r/${slug}/reservations`, { method: 'POST', body: JSON.stringify({
+      name: $('name').value, phone: $('phone').value, email: $('email').value, notes: $('notes').value, website: $('website').value,
+      partySize: Number($('party').value), date: chosen.date, time: chosen.time, zone: $('zone').value || undefined, language: L,
+    }) });
+    if (d.guaranteeUrl) { msg('bookMsg', t('redirect'), true); location.href = d.guaranteeUrl; return; }
+    $('book').classList.add('hidden'); $('done').classList.remove('hidden');
+    $('doneCode').textContent = d.code; $('doneWhen').textContent = `${d.date} · ${d.time} · ${$('party').value} ${t('persons')}`;
+    parent.postMessage({ type: 'opsis:booked', code: d.code }, '*');
+  } catch (e) {
+    let text = e.message;
+    if (e.alternatives && e.alternatives.length) text += ' → ' + e.alternatives.slice(0, 6).map((a) => a.time).join(', ');
+    msg('bookMsg', text);
+  } finally { $('submit').disabled = false; }
+}
+async function manage(code) {
+  $('book').classList.add('hidden'); $('manage').classList.remove('hidden'); $('mCode').textContent = code;
+  if (q.get('guarantee') === 'ok') msg('mMsg', t('guaranteeOk'), true);
+  $('mLoad').onclick = async () => {
+    try {
+      const d = await api(`/api/r/${slug}/reservations/${code}?contact=${encodeURIComponent($('mContact').value)}`);
+      $('mAsk').classList.add('hidden'); $('mInfo').classList.remove('hidden');
+      $('mWhen').textContent = `${d.date} · ${d.time} · ${d.party_size} ${t('persons')} · ${d.status}`;
+      $('mCancel').classList.toggle('hidden', !['confirmed', 'pending_guarantee'].includes(d.status));
+    } catch (e) { msg('mMsg', e.message); }
+  };
+  $('mCancel').onclick = async () => {
+    try { await api(`/api/r/${slug}/reservations/${code}/cancel`, { method: 'POST', body: JSON.stringify({ contact: $('mContact').value }) });
+      $('mInfo').classList.add('hidden'); msg('mMsg', t('cancelled'), true);
+    } catch (e) { msg('mMsg', e.message); }
+  };
+}
+(async function init() {
+  applyLang();
+  try { R = await api(`/api/r/${slug}`); } catch (e) { document.querySelector('main').textContent = e.message; return; }
+  document.title = R.name; $('rname').textContent = R.name; $('raddr').textContent = [R.address, R.phone].filter(Boolean).join(' · ');
+  $('party').innerHTML = Array.from({ length: R.max_party_size }, (_, i) => `<option ${i === 1 ? 'selected' : ''}>${i + 1}</option>`).join('');
+  const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  $('date').value = today.toISOString().slice(0, 10); $('date').min = $('date').value;
+  fillZones(); renderGuarantee();
+  if (q.get('code')) return manage(q.get('code'));
+  ['date', 'party', 'zone'].forEach((id) => $(id).onchange = loadSlots);
+  $('submit').onclick = submit;
+  loadSlots();
+})();
+</script>
+</body>
+</html>
