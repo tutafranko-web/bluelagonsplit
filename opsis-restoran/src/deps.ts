@@ -21,7 +21,17 @@ export interface Payments {
     restaurant: Restaurant; paymentMethodId: string; customerId: string;
     amountCents: number; reservationCode: string;
   }): Promise<string>;
+  /** Stripe Connect: novi Express račun za restoran. Vraća acct_... */
+  createConnectAccount(input: { restaurant: Restaurant }): Promise<string>;
+  /** Link na Stripeov onboarding (podaci tvrtke, IBAN). */
+  createOnboardingLink(input: { accountId: string; refreshUrl: string; returnUrl: string }): Promise<string>;
+  getAccountStatus(accountId: string): Promise<{ chargesEnabled: boolean; detailsSubmitted: boolean }>;
 }
+
+/** Stripe događaji koje server obrađuje. */
+export type StripeEvent =
+  | { type: 'setup_completed'; sessionId: string; paymentMethodId: string; customerId: string | null }
+  | { type: 'account_updated'; accountId: string; chargesEnabled: boolean };
 
 export interface Transport {
   sendEmail(input: { to: string; subject: string; text: string; replyTo?: string | null }): Promise<void>;

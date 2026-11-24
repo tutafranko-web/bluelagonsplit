@@ -11,12 +11,13 @@ Projekt: Opsis Restoran — multi-tenant sustav za restorane (rezervacije, AI ch
 - Nikad ne spremaj brojeve kartica; samo Stripe tokene.
 - Fiskalizacija je isključena dok se ne testira na CIS demo okolini — ne uključuj je bez Frankove potvrde.
 - Upit za Google recenziju po defaultu traži odobrenje osoblja (review_mode = 'approval'); nikad ga ne šalji gostu koji nije bio (status seated/completed).
+- Admin rute: `admin(req)` = svi prijavljeni (konobar i vlasnik), `admin(req, 'owner')` = samo vlasnik. Nove rute koje mijenjaju postavke, stolove, meni ili korisnike moraju biti 'owner'.
 - Ne mijenjaj tekstove poruka gostima bez provjere sva tri jezika (hr/en/de) u `src/services/messages.ts`.
 
 ## Sljedeći zadaci (po prioritetu)
 1. Deploy na Hostinger VPS (`docker compose up -d --build`), Supabase baza, domena u `Caddyfile`.
 2. Spojiti prave ključeve (.env) i proći ručni test: web rezervacija, WhatsApp poruka, Retell poziv.
-3. Panel: polja za WhatsApp phone number ID, Instagram ID, Stripe Connect onboarding link.
-4. Spajanje stolova za veće grupe.
-5. Korisnici panela (vlasnik/konobar) umjesto jednog ključa.
+3. ~~Panel: polja za WhatsApp phone number ID, Instagram ID, Stripe Connect onboarding link.~~ ✅
+4. ~~Spajanje stolova za veće grupe.~~ ✅ (spojevi koje definira osoblje)
+5. ~~Korisnici panela (vlasnik/konobar) umjesto jednog ključa.~~ ✅ (ključ restorana i dalje radi kao vlasnik)
 6. Fiskalizacija: test na CIS demo, PNP, storno, ispis računa.

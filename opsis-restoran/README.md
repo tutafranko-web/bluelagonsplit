@@ -18,6 +18,9 @@ Jedan server služi više restorana (svaki ima svoj `slug` i ključ za panel).
 | Voice agent: Retell custom funkcije + inbound webhook | ✅ testirano bez Retella |
 | Panel za restoran `/admin`: rezervacije, narudžbe (zvuk), meni, stolovi + QR linkovi, postavke, statistika | ✅ testirano u pregledniku |
 | QR meni po stolu `/m/TOKEN`: narudžba, poziv konobara, račun, 14 EU alergena | ✅ testirano u pregledniku |
+| Korisnici panela: vlasnik i konobar (korisničko ime + lozinka), konobar vidi samo rezervacije, narudžbe i dostupnost jela | ✅ testirano |
+| Spajanje stolova za veće grupe (osoblje definira koji se stolovi spajaju) | ✅ testirano |
+| Panel: WhatsApp Phone number ID, Instagram ID, Stripe Connect onboarding (gumb „Spoji Stripe“) | ✅ testirano s lažnim Stripeom |
 | Fiskalizacija (ZKI, potpis, CIS, naknadna dostava) | ⚠️ testirano lokalno, **nije** testirano na CIS demo okolini |
 
 **Nije isprobano s pravim servisima** (treba tvoje ključeve): Anthropic, Retell, Meta/WhatsApp, Stripe, SMTP, CIS.
@@ -30,9 +33,9 @@ npm start            # bez DATABASE_URL koristi bazu u memoriji + demo restoran
 ```
 
 - Rezervacija: http://localhost:3000/b/demo-konoba
-- Panel: http://localhost:3000/admin (oznaka `demo-konoba`, ključ `demo-key`)
+- Panel: http://localhost:3000/admin (oznaka `demo-konoba`; vlasnik `vlasnik` / `demo1234`, konobar `konobar` / `demo1234`, ili ključ `demo-key`)
 - QR meni: http://localhost:3000/m/demo-qr-3
-- Testovi: `npm test` (35 testova) · provjera tipova: `npm run typecheck`
+- Testovi: `npm test` (41 test) · provjera tipova: `npm run typecheck`
 
 ## Produkcija (Hostinger VPS + Supabase)
 
@@ -43,9 +46,12 @@ npm start            # bez DATABASE_URL koristi bazu u memoriji + demo restoran
 5. Novi restoran:
    ```bash
    curl -X POST https://DOMENA/api/super/restaurants -H "x-super-key: $SUPER_ADMIN_KEY" \
-     -H "content-type: application/json" -d '{"slug":"konoba-x","name":"Konoba X","phone":"+38521..."}'
+     -H "content-type: application/json" \
+     -d '{"slug":"konoba-x","name":"Konoba X","phone":"+38521...","owner":{"username":"ivan","password":"privremena-lozinka"}}'
    ```
-   Odgovor sadrži `admin_api_key` — to daješ restoranu za panel. Ostalo (stolovi, meni, radno vrijeme) se podesi u panelu.
+   Vlasnik se prijavljuje u panel korisničkim imenom i lozinkom, a konobare dodaje sam (kartica *Korisnici*).
+   Odgovor sadrži i `admin_api_key` — rezervni ključ s vlasničkim pravima; čuvaj ga ti, ne treba ga davati restoranu.
+   Ostalo (stolovi, spojeni stolovi, meni, radno vrijeme, WhatsApp/Instagram ID, Stripe) se podesi u panelu.
 
 Upute po servisu: [voice agent](docs/voice-agent-retell.md) · [WhatsApp/Instagram](docs/whatsapp-instagram.md) · [Stripe i fiskalizacija](docs/stripe-i-fiskalizacija.md)
 
@@ -65,6 +71,9 @@ src/
   services/
     availability.ts      radno vrijeme, slobodni termini, izbor stola
     reservations.ts      kreiranje, izmjena, otkaz, garancija, no-show
+    tables.ts            spojeni stolovi
+    staff.ts             korisnici panela, prijava, uloge
+    settings.ts          postavke restorana, kanali, Stripe Connect onboarding
     notifications.ts     outbox: WhatsApp predlošci + email
     messages.ts          tekstovi poruka HR/EN/DE
     orders.ts            faza 2: meni, QR narudžbe
@@ -81,9 +90,8 @@ tests/                   vitest (pravi Postgres u memoriji — PGlite)
 
 ## Poznata ograničenja (sljedeći koraci)
 
-- Spajanje stolova za velike grupe nije podržano (grupe > najveći stol → telefon).
-- Panel nema polja za WhatsApp/Instagram/Stripe ID — upisuju se SQL-om.
-- Admin pristup je jedan ključ po restoranu (nema korisnika i uloga).
+- Spajanje stolova radi samo za spojeve koje osoblje unaprijed upiše (nema automatskog spajanja susjednih stolova).
+- Stripe Connect webhook mora slušati i `account.updated` (vidi docs/stripe-i-fiskalizacija.md).
 - Nema SMS-a (samo WhatsApp + email).
 - Rate limit je u memoriji jednog procesa — za više instanci treba Redis.
 - GDPR: chat razgovori se brišu nakon 30 dana; treba dodati brisanje gostiju na zahtjev i DPA s restoranom.

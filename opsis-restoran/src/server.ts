@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import type { Db } from './db.js';
-import type { Deps } from './deps.js';
+import type { Deps, StripeEvent } from './deps.js';
 import { findAvailability, getRestaurantBySlug } from './services/availability.js';
 import {
   cancelReservation, createReservation, getByCode, listForDay, modifyReservation, setStatus, verifyGuest, confirmGuarantee, decideReview,
@@ -13,7 +13,10 @@ import { AppError, type Restaurant } from './services/types.js';
 import { utcToLocal } from './time.js';
 import { runChat } from './ai/chatbot.js';
 import { executeTool } from './ai/tools.js';
-import { openOrders, placeOrder, publicMenu, setOrderStatus, tableByQr, upsertMenuItem } from './services/orders.js';
+import { openOrders, placeOrder, publicMenu, setMenuItemAvailable, setOrderStatus, tableByQr, upsertMenuItem } from './services/orders.js';
+import { authenticate, createUser, listUsers, login, logout, requireRole, updateUser, type StaffIdentity } from './services/staff.js';
+import { getSettings, refreshStripeStatus, startStripeOnboarding, stripeAccountUpdated, updateSettings } from './services/settings.js';
+import { createCombination, deleteCombination, listCombinations, updateCombination } from './services/tables.js';
 import { issueInvoice } from './fiscal/invoices.js';
 import type { CisSender } from './fiscal/cis.js';
 
@@ -25,7 +28,7 @@ declare module 'fastify' {
 
 export interface AppOptions {
   /** Stripe: provjera potpisa i čitanje setup sessiona (null = webhook isključen). */
-  stripeWebhook?: ((rawBody: string, signature: string) => Promise<{ sessionId: string; paymentMethodId: string; customerId: string | null } | null>) | null;
+  stripeWebhook?: ((rawBody: string, signature: string) => Promise<StripeEvent | null>) | null;
   cisSender?: CisSender | null;
   logger?: boolean;
 }
@@ -81,6 +84,7 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
   const chatLimit = rateLimiter(20, 60_000);
   const bookLimit = rateLimiter(10, 60_000);
   const orderLimit = rateLimiter(20, 60_000);
+  const loginLimit = rateLimiter(10, 60_000);
 
   // ---------- stranice ----------
   app.get('/health', async () => ({ ok: true }));
@@ -167,12 +171,42 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
   });
 
   // ---------- admin (panel restorana) ----------
-  async function admin(req: any): Promise<Restaurant> {
+  // vlasnik (owner): sve; konobar (waiter): rezervacije, narudžbe, dostupnost jela, računi
+  const bearer = (req: any) => String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  async function admin(req: any, role: 'owner' | 'waiter' = 'waiter'): Promise<Restaurant> {
     const r = await getRestaurantBySlug(db, req.params.slug);
-    const auth = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
-    if (!auth || !safeEqual(auth, r.admin_api_key)) throw new AppError(401, 'unauthorized', 'Neispravan ključ');
+    const who: StaffIdentity = await authenticate(db, r, bearer(req), deps.now());
+    requireRole(who, role);
+    req.staff = who;
     return r;
   }
+
+  app.post('/api/admin/:slug/login', async (req: any) => {
+    loginLimit(`${req.ip}:${req.params.slug}`);
+    const r = await getRestaurantBySlug(db, req.params.slug);
+    return login(db, r, req.body?.username, req.body?.password, deps.now());
+  });
+
+  app.post('/api/admin/:slug/logout', async (req: any) => {
+    await admin(req);
+    if (req.staff.userId) await logout(db, bearer(req));
+    return { ok: true };
+  });
+
+  app.get('/api/admin/:slug/me', async (req: any) => {
+    const r = await admin(req);
+    return { ...req.staff, restaurant: r.name };
+  });
+
+  app.get('/api/admin/:slug/users', async (req: any) => listUsers(db, await admin(req, 'owner')));
+  app.post('/api/admin/:slug/users', async (req: any, reply: any) => {
+    const r = await admin(req, 'owner');
+    return reply.status(201).send(await createUser(db, r, req.body ?? {}));
+  });
+  app.put('/api/admin/:slug/users/:id', async (req: any) => {
+    const r = await admin(req, 'owner');
+    return updateUser(db, r, Number(req.params.id), req.body ?? {});
+  });
 
   app.get('/api/admin/:slug/reservations', async (req: any) => {
     const r = await admin(req);
@@ -212,47 +246,20 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
     return modifyReservation(db, deps, r, req.params.code, null, { date: b.date, time: b.time, partySize: b.partySize ? Number(b.partySize) : undefined }, { admin: true });
   });
 
-  const SETTINGS = ['name', 'phone', 'email', 'address', 'default_language', 'opening_hours', 'closed_dates', 'slot_minutes',
-    'default_duration_minutes', 'max_party_size', 'guarantee_mode', 'guarantee_min_party', 'no_show_fee_cents',
-    'google_review_url', 'review_mode', 'info_text'] as const;
-  const JSON_SETTINGS = new Set(['opening_hours', 'closed_dates']);
+  app.get('/api/admin/:slug/settings', async (req: any) => getSettings(await admin(req)));
+  app.put('/api/admin/:slug/settings', async (req: any) => updateSettings(db, await admin(req, 'owner'), req.body ?? {}));
 
-  app.get('/api/admin/:slug/settings', async (req: any) => {
-    const r = await admin(req);
-    const out: any = {};
-    for (const k of SETTINGS) out[k] = (r as any)[k];
-    out.slug = r.slug;
-    out.stripe_connected = !!r.stripe_account_id;
-    out.whatsapp_connected = !!r.whatsapp_phone_number_id;
-    out.fiscal_enabled = !!(r.fiscal_config as any)?.enabled;
-    return out;
-  });
-
-  app.put('/api/admin/:slug/settings', async (req: any) => {
-    const r = await admin(req);
-    const b = req.body ?? {};
-    const sets: string[] = [], vals: unknown[] = [r.id];
-    for (const k of SETTINGS) {
-      if (!(k in b)) continue;
-      if (k === 'guarantee_mode' && !['none', 'card'].includes(b[k])) throw new AppError(400, 'bad_value', 'guarantee_mode: none ili card');
-      if (k === 'review_mode' && !['approval', 'auto', 'off'].includes(b[k])) throw new AppError(400, 'bad_value', 'review_mode: approval, auto ili off');
-      if (k === 'opening_hours' && (!Array.isArray(b[k]) || b[k].some((p: any) => !(p.weekday >= 1 && p.weekday <= 7) || !/^\d{2}:\d{2}$/.test(p.open) || !/^\d{2}:\d{2}$/.test(p.close))))
-        throw new AppError(400, 'bad_value', 'Neispravno radno vrijeme');
-      vals.push(JSON_SETTINGS.has(k) ? JSON.stringify(b[k]) : b[k]);
-      sets.push(`${k} = $${vals.length}`);
-    }
-    if (!sets.length) return { updated: 0 };
-    await db.query(`update restaurants set ${sets.join(', ')} where id = $1`, vals);
-    return { updated: sets.length };
-  });
+  // Stripe Connect: vlasnik otvara link, upiše podatke tvrtke i vraća se u panel
+  app.post('/api/admin/:slug/stripe/onboarding', async (req: any) => startStripeOnboarding(db, deps, await admin(req, 'owner')));
+  app.post('/api/admin/:slug/stripe/refresh', async (req: any) => refreshStripeStatus(db, deps, await admin(req, 'owner')));
 
   app.get('/api/admin/:slug/tables', async (req: any) => {
-    const r = await admin(req);
+    const r = await admin(req, 'owner');
     return (await db.query('select * from dining_tables where restaurant_id = $1 order by zone, label', [r.id])).rows;
   });
 
   app.post('/api/admin/:slug/tables', async (req: any, reply: any) => {
-    const r = await admin(req);
+    const r = await admin(req, 'owner');
     const b = req.body ?? {};
     if (!b.label || !(b.max_capacity >= 1)) throw new AppError(400, 'bad_table', 'Treba oznaka i kapacitet');
     const row = (await db.query(
@@ -263,7 +270,7 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
   });
 
   app.put('/api/admin/:slug/tables/:id', async (req: any) => {
-    const r = await admin(req);
+    const r = await admin(req, 'owner');
     const b = req.body ?? {};
     const row = (await db.query(
       `update dining_tables set label = coalesce($3, label), zone = coalesce($4, zone), min_capacity = coalesce($5, min_capacity),
@@ -274,16 +281,29 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
     return row;
   });
 
+  app.get('/api/admin/:slug/table-combos', async (req: any) => listCombinations(db, await admin(req, 'owner')));
+  app.post('/api/admin/:slug/table-combos', async (req: any, reply: any) => {
+    const r = await admin(req, 'owner');
+    return reply.status(201).send(await createCombination(db, r, req.body ?? {}));
+  });
+  app.put('/api/admin/:slug/table-combos/:id', async (req: any) => updateCombination(db, await admin(req, 'owner'), Number(req.params.id), req.body ?? {}));
+  app.delete('/api/admin/:slug/table-combos/:id', async (req: any) => deleteCombination(db, await admin(req, 'owner'), Number(req.params.id)));
+
+  app.post('/api/admin/:slug/menu/:id/available', async (req: any) => {
+    const r = await admin(req);
+    return setMenuItemAvailable(db, r.id, Number(req.params.id), req.body?.available === true);
+  });
+
   app.get('/api/admin/:slug/menu', async (req: any) => {
     const r = await admin(req);
     return (await db.query('select * from menu_items where restaurant_id = $1 order by sort, category, id', [r.id])).rows;
   });
   app.post('/api/admin/:slug/menu', async (req: any, reply: any) => {
-    const r = await admin(req);
+    const r = await admin(req, 'owner');
     return reply.status(201).send(await upsertMenuItem(db, r.id, req.body ?? {}));
   });
   app.put('/api/admin/:slug/menu/:id', async (req: any) => {
-    const r = await admin(req);
+    const r = await admin(req, 'owner');
     return upsertMenuItem(db, r.id, req.body ?? {}, Number(req.params.id));
   });
 
@@ -308,7 +328,7 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
   });
 
   app.get('/api/admin/:slug/stats', async (req: any) => {
-    const r = await admin(req);
+    const r = await admin(req, 'owner');
     const from = req.query.from ? new Date(req.query.from) : new Date(deps.now().getTime() - 30 * 86400_000);
     const to = req.query.to ? new Date(req.query.to) : deps.now();
     const rows = (await db.query(
@@ -331,15 +351,18 @@ export async function buildApp(db: Db, deps: Deps, opts: AppOptions = {}): Promi
        values ($1,$2,$3,$4,$5,$6,$7) returning id, slug, name`,
       [b.slug, b.name ?? b.slug, b.phone ?? null, b.email ?? null, b.address ?? null, JSON.stringify(b.opening_hours ?? []), adminKey],
     )).rows[0];
-    return reply.status(201).send({ ...r, admin_api_key: adminKey });
+    // po želji odmah i vlasnikov račun za panel: { "owner": { "username": "...", "password": "..." } }
+    const owner = b.owner ? await createUser(db, await getRestaurantBySlug(db, r.slug), { ...b.owner, role: 'owner' }) : null;
+    return reply.status(201).send({ ...r, admin_api_key: adminKey, owner });
   });
 
   // ---------- Stripe webhook ----------
   app.post('/webhooks/stripe', async (req: any) => {
     if (!opts.stripeWebhook) throw new AppError(503, 'stripe_disabled', 'Stripe nije podešen');
     const sig = String(req.headers['stripe-signature'] ?? '');
-    const info = await opts.stripeWebhook(req.rawBody ?? '', sig);
-    if (info) await confirmGuarantee(db, deps, info.sessionId, info.paymentMethodId, info.customerId);
+    const ev = await opts.stripeWebhook(req.rawBody ?? '', sig);
+    if (ev?.type === 'setup_completed') await confirmGuarantee(db, deps, ev.sessionId, ev.paymentMethodId, ev.customerId);
+    if (ev?.type === 'account_updated') await stripeAccountUpdated(db, ev.accountId, ev.chargesEnabled);
     return { received: true };
   });
 

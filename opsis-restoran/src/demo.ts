@@ -1,4 +1,5 @@
 import type { Db } from './db.js';
+import { hashPassword } from './services/staff.js';
 
 /** Demo restoran za lokalno isprobavanje i prezentacije klijentima. */
 export async function seedDemo(db: Db) {
@@ -18,6 +19,17 @@ export async function seedDemo(db: Db) {
       ($1,'4','unutra',2,4,'demo-qr-4'),($1,'T1','terasa',2,4,'demo-qr-t1'),($1,'T2','terasa',4,8,'demo-qr-t2')`,
     [r.id],
   );
+  // spoj za veće grupe: stolovi 3+4 unutra (5–8 osoba)
+  await db.query(
+    `insert into table_combinations (restaurant_id, table_ids, min_capacity, max_capacity)
+     select $1, array_agg(id order by label), 5, 8 from dining_tables where restaurant_id = $1 and label in ('3','4')`,
+    [r.id],
+  );
+  // demo prijave: vlasnik / demo1234 i konobar / demo1234
+  for (const [username, name, role] of [['vlasnik', 'Vlasnik Demo', 'owner'], ['konobar', 'Konobar Demo', 'waiter']]) {
+    await db.query('insert into staff_users (restaurant_id, username, name, role, password_hash) values ($1,$2,$3,$4,$5)',
+      [r.id, username, name, role, await hashPassword('demo1234')]);
+  }
   const items: [string, any, number, number, string[]][] = [
     ['Predjela', { hr: 'Dalmatinski pršut i sir', en: 'Dalmatian prosciutto and cheese', de: 'Dalmatinischer Schinken und Käse' }, 1600, 13, ['mlijeko']],
     ['Glavna jela', { hr: 'Crni rižot', en: 'Black cuttlefish risotto', de: 'Schwarzes Risotto' }, 1800, 13, ['mekušci', 'mlijeko']],

@@ -70,7 +70,7 @@ export async function notify(db: Db, deps: Deps, r: Restaurant, res: Reservation
 }
 
 function needsGuarantee(r: Restaurant, deps: Deps, partySize: number) {
-  return r.guarantee_mode === 'card' && partySize >= r.guarantee_min_party && !!deps.payments && !!r.stripe_account_id;
+  return r.guarantee_mode === 'card' && partySize >= r.guarantee_min_party && !!deps.payments && !!r.stripe_account_id && r.stripe_charges_enabled;
 }
 
 export async function createReservation(db: Db, deps: Deps, r: Restaurant, input: CreateInput): Promise<CreateResult> {
@@ -95,7 +95,7 @@ export async function createReservation(db: Db, deps: Deps, r: Restaurant, input
     const pick = await pickTable(t, r, { date: input.date, time: input.time, partySize, zone: input.zone ?? undefined });
     if (pick.start.getTime() < deps.now().getTime()) throw new AppError(409, 'in_past', 'To vrijeme je već prošlo');
     if (!pick.withinHours) throw new AppError(409, 'closed', 'Restoran tada ne radi ili je to prekasno za dolazak');
-    if (!pick.table) return null;
+    if (!pick.seat) return null;
 
     // gost: po mobitelu, inače po emailu
     let guest = phone
@@ -126,9 +126,9 @@ export async function createReservation(db: Db, deps: Deps, r: Restaurant, input
       try {
         res = (
           await t.query<Reservation>(
-            `insert into reservations (code, restaurant_id, guest_id, table_id, party_size, start_at, end_at, status, source, notes, guarantee_expires_at, created_at)
-             values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,
-            [newCode(), r.id, guest.id, pick.table.id, partySize, pick.start, pick.end, status, input.source, input.notes ?? '', expires, deps.now()],
+            `insert into reservations (code, restaurant_id, guest_id, table_id, extra_table_ids, party_size, start_at, end_at, status, source, notes, guarantee_expires_at, created_at)
+             values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning *`,
+            [newCode(), r.id, guest.id, pick.seat.table.id, pick.seat.extraTableIds, partySize, pick.start, pick.end, status, input.source, input.notes ?? '', expires, deps.now()],
           )
         ).rows[0];
       } catch (e: any) {
@@ -221,12 +221,12 @@ export async function modifyReservation(
     await t.query('select id from restaurants where id = $1 for update', [r.id]);
     const pick = await pickTable(t, r, { date, time, partySize, excludeReservationId: res.id });
     if (!pick.withinHours) throw new AppError(409, 'closed', 'Restoran tada ne radi');
-    if (!pick.table) throw new AppError(409, 'no_table', 'Nema slobodnog stola u to vrijeme');
+    if (!pick.seat) throw new AppError(409, 'no_table', 'Nema slobodnog stola u to vrijeme');
     return (
       await t.query<Reservation>(
-        `update reservations set start_at = $2, end_at = $3, party_size = $4, table_id = $5, reminder_sent_at = null, updated_at = now()
+        `update reservations set start_at = $2, end_at = $3, party_size = $4, table_id = $5, extra_table_ids = $6, reminder_sent_at = null, updated_at = now()
           where id = $1 returning *`,
-        [res.id, pick.start, pick.end, partySize, pick.table.id],
+        [res.id, pick.start, pick.end, partySize, pick.seat.table.id, pick.seat.extraTableIds],
       )
     ).rows[0];
   });
@@ -300,7 +300,8 @@ export async function listForDay(db: Db, r: Restaurant, date: string) {
   return (
     await db.query(
       `select res.*, g.name as guest_name, g.phone as guest_phone, g.email as guest_email, g.visits, g.no_shows,
-              t.label as table_label, t.zone
+              coalesce((select string_agg(x.label, '+' order by x.label) from dining_tables x
+                         where x.id = any(array[res.table_id] || res.extra_table_ids)), '') as table_label, t.zone
          from reservations res join guests g on g.id = res.guest_id left join dining_tables t on t.id = res.table_id
         where res.restaurant_id = $1 and res.start_at >= $2 and res.start_at < $3
         order by res.start_at`,

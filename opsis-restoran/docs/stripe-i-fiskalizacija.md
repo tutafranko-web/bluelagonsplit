@@ -4,11 +4,16 @@
 
 Novac od no-show naknada ide **izravno restoranu**, ne tebi. Zato koristimo Stripe Connect:
 
-1. Na svom Stripe računu uključi Connect (platforma).
-2. Restoran prođe onboarding (Standard ili Express račun) — dobiješ `acct_...`.
-3. Upiši ga u `restaurants.stripe_account_id`, a u panelu uključi "Garancija karticom".
+1. Na svom Stripe računu uključi Connect (platforma) i u Connect postavkama uključi Express račune (zemlja: Hrvatska).
+2. Vlasnik restorana u panelu: *Postavke → Kanali i plaćanje → Spoji Stripe*. Server napravi Express račun (`acct_...`),
+   vlasnik na Stripeu upiše podatke tvrtke i IBAN i vrati se u panel (panel sam provjeri stanje).
+   Stanje: *nije spojen* → *čeka podatke na Stripeu* → *spojen, naplata radi*.
+3. U panelu uključi "Garancija karticom". Garancija se traži tek kad je stanje *spojen, naplata radi*
+   (do tada rezervacije prolaze bez kartice).
 4. Webhook: Stripe → Developers → Webhooks → endpoint `https://TVOJA-DOMENA/webhooks/stripe`,
-   događaj `checkout.session.completed`, **"Listen to events on Connected accounts"**. Secret u `STRIPE_WEBHOOK_SECRET`.
+   događaji `checkout.session.completed` i `account.updated`, **"Listen to events on Connected accounts"**. Secret u `STRIPE_WEBHOOK_SECRET`.
+
+Postojeći račun (npr. Standard) i dalje se može upisati ručno: `update restaurants set stripe_account_id = 'acct_...', stripe_charges_enabled = true where slug = '...'`.
 
 Tok: gost rezervira → dobije link (Stripe Checkout, setup mode) → ostavi karticu → rezervacija `confirmed`.
 Ako ne ostavi karticu u 30 min → `expired`, stol se oslobađa. Osoblje u panelu klikne "Nije došao" → naplata `no_show_fee_cents × broj osoba`.

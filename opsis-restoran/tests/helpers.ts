@@ -14,11 +14,12 @@ export function fakeTransport(): Transport & { sent: Sent[] } {
   };
 }
 
-export function fakePayments(): Payments & { charges: any[]; sessions: any[] } {
+export function fakePayments(): Payments & { charges: any[]; sessions: any[]; accounts: { id: string; chargesEnabled: boolean }[] } {
+  const accounts: { id: string; chargesEnabled: boolean }[] = [];
   const charges: any[] = [];
   const sessions: any[] = [];
   return {
-    charges, sessions,
+    charges, sessions, accounts,
     async createGuaranteeSession(i) {
       const s = { id: `cs_test_${sessions.length + 1}`, url: `https://checkout.stripe.test/${sessions.length + 1}` };
       sessions.push({ ...i, ...s });
@@ -27,6 +28,16 @@ export function fakePayments(): Payments & { charges: any[]; sessions: any[] } {
     async chargeNoShow(i) {
       charges.push(i);
       return `pi_test_${charges.length}`;
+    },
+    async createConnectAccount() {
+      accounts.push({ id: `acct_new_${accounts.length + 1}`, chargesEnabled: false });
+      return accounts[accounts.length - 1].id;
+    },
+    async createOnboardingLink(i) {
+      return `https://connect.stripe.test/${i.accountId}?return=${encodeURIComponent(i.returnUrl)}`;
+    },
+    async getAccountStatus(id) {
+      return { chargesEnabled: !!accounts.find((a) => a.id === id)?.chargesEnabled, detailsSubmitted: true };
     },
   };
 }
@@ -51,11 +62,11 @@ export async function setup(opts: { now?: Date; llm?: LLM | null; guarantee?: bo
   const r = (
     await db.query<Restaurant>(
       `insert into restaurants (slug, name, phone, email, address, opening_hours, admin_api_key, guarantee_mode, guarantee_min_party,
-         no_show_fee_cents, stripe_account_id, google_review_url, whatsapp_phone_number_id, info_text, closed_dates)
-       values ('konoba-test','Konoba Test','+38521000000','konoba@test.hr','Riva 1, Split',$1,'admin-key',$2,4,2000,$3,
+         no_show_fee_cents, stripe_account_id, stripe_charges_enabled, google_review_url, whatsapp_phone_number_id, info_text, closed_dates)
+       values ('konoba-test','Konoba Test','+38521000000','konoba@test.hr','Riva 1, Split',$1,'admin-key',$2,4,2000,$3,$4,
                'https://g.page/r/test/review','wa-phone-1','Parking u blizini. Psi dozvoljeni na terasi.', '["2026-07-20"]')
        returning *`,
-      [JSON.stringify(hours), opts.guarantee ? 'card' : 'none', opts.guarantee ? 'acct_test' : null],
+      [JSON.stringify(hours), opts.guarantee ? 'card' : 'none', opts.guarantee ? 'acct_test' : null, !!opts.guarantee],
     )
   ).rows[0];
   // 2 stola za 2, 1 za 4 unutra, 1 za 6 na terasi

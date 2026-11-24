@@ -10,11 +10,11 @@ Meta App → Webhooks:
 
 ## Spajanje restorana
 
-U tablici `restaurants` upiši:
-- `whatsapp_phone_number_id` — Phone number ID iz WhatsApp Managera (ne sam broj!)
-- `instagram_account_id` — ID Instagram poslovnog računa
+Vlasnik u panelu: *Postavke → Kanali i plaćanje* upiše:
+- **WhatsApp Phone number ID** — iz WhatsApp Managera / API Setup (ne sam broj telefona!)
+- **Instagram Business Account ID** — ID Instagram poslovnog računa
 
-(Za sada SQL-om u Supabaseu; panel to još nema.)
+Isti ID ne može biti spojen na dva restorana. Prazno polje = kanal isključen.
 
 ## Predlošci poruka (moraju biti odobreni)
 

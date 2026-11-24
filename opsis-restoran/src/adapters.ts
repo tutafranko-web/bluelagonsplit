@@ -2,7 +2,7 @@
 import Stripe from 'stripe';
 import nodemailer from 'nodemailer';
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLM, Payments, Transport } from './deps.js';
+import type { LLM, Payments, StripeEvent, Transport } from './deps.js';
 
 /**
  * Stripe Connect: novac ide izravno restoranu (restaurant.stripe_account_id),
@@ -44,17 +44,44 @@ export function stripePayments(secretKey: string): Payments {
       );
       return pi.id;
     },
+    async createConnectAccount({ restaurant }) {
+      const a = await stripe.accounts.create({
+        type: 'express',
+        country: 'HR',
+        email: restaurant.email ?? undefined,
+        business_profile: { name: restaurant.name, mcc: '5812' }, // 5812 = restorani
+        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        metadata: { restaurantSlug: restaurant.slug },
+      });
+      return a.id;
+    },
+    async createOnboardingLink({ accountId, refreshUrl, returnUrl }) {
+      const l = await stripe.accountLinks.create({ account: accountId, refresh_url: refreshUrl, return_url: returnUrl, type: 'account_onboarding' });
+      return l.url;
+    },
+    async getAccountStatus(accountId) {
+      const a = await stripe.accounts.retrieve(accountId);
+      return { chargesEnabled: !!a.charges_enabled, detailsSubmitted: !!a.details_submitted };
+    },
   };
 }
 
-/** Iz Stripe webhook eventa izvuče payment method i customer za checkout.session.completed (setup mode). */
-export async function readSetupSession(secretKey: string, event: any): Promise<{ sessionId: string; paymentMethodId: string; customerId: string | null } | null> {
+/**
+ * Iz Stripe webhook eventa izvuče ono što nas zanima:
+ *  - checkout.session.completed (setup mode): gost ostavio karticu
+ *  - account.updated: restoran završio Connect onboarding
+ */
+export async function readStripeEvent(secretKey: string, event: any): Promise<StripeEvent | null> {
+  if (event.type === 'account.updated') {
+    const a = event.data.object;
+    return { type: 'account_updated', accountId: String(a.id), chargesEnabled: !!a.charges_enabled };
+  }
   if (event.type !== 'checkout.session.completed') return null;
   const session = event.data.object;
   if (session.mode !== 'setup' || !session.setup_intent) return null;
   const stripe = new Stripe(secretKey);
   const si = await stripe.setupIntents.retrieve(session.setup_intent, {}, event.account ? { stripeAccount: event.account } : undefined);
-  return { sessionId: session.id, paymentMethodId: String(si.payment_method), customerId: session.customer ?? null };
+  return { type: 'setup_completed', sessionId: session.id, paymentMethodId: String(si.payment_method), customerId: session.customer ?? null };
 }
 
 export function verifyStripeEvent(secretKey: string, webhookSecret: string, rawBody: string | Buffer, signature: string) {

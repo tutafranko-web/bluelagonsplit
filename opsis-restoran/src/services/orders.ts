@@ -46,6 +46,13 @@ export async function upsertMenuItem(db: Db, restaurantId: number, m: MenuItemIn
   ).rows[0];
 }
 
+/** Samo dostupnost ("nema više ribe") — smije i konobar, bez mijenjanja cijena. */
+export async function setMenuItemAvailable(db: Db, restaurantId: number, id: number, available: boolean) {
+  const { rows } = await db.query('update menu_items set available = $3 where id = $1 and restaurant_id = $2 returning *', [id, restaurantId, available]);
+  if (!rows[0]) throw new AppError(404, 'item_not_found', 'Stavka ne postoji');
+  return rows[0];
+}
+
 export async function publicMenu(db: Db, restaurantId: number) {
   return (
     await db.query(

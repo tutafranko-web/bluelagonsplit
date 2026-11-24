@@ -35,9 +35,11 @@
 <div id="login" class="hidden" style="max-width:360px;margin:80px auto">
   <div class="card">
     <h3>Prijava u panel</h3>
-    <p class="muted">Upišite oznaku restorana i ključ koji ste dobili.</p>
+    <p class="muted">Upišite oznaku restorana, korisničko ime i lozinku.</p>
     <p><input id="lSlug" placeholder="oznaka, npr. konoba-test" style="width:100%"></p>
-    <p><input id="lKey" type="password" placeholder="ključ" style="width:100%"></p>
+    <p id="lUserRow"><input id="lUser" placeholder="korisničko ime" autocomplete="username" style="width:100%"></p>
+    <p><input id="lKey" type="password" placeholder="lozinka" autocomplete="current-password" style="width:100%"></p>
+    <p><label class="muted"><input type="checkbox" id="lByKey"> Prijava ključem restorana (vlasnik)</label></p>
     <button class="b p" id="lGo">Prijava</button> <span id="lErr" class="muted"></span>
   </div>
 </div>
@@ -49,11 +51,12 @@
     <button data-tab="res" class="on">Rezervacije</button>
     <button data-tab="orders">Narudžbe <span id="ordCount" class="tag"></span></button>
     <button data-tab="menu">Meni</button>
-    <button data-tab="tables">Stolovi i QR</button>
-    <button data-tab="settings">Postavke</button>
-    <button data-tab="stats">Statistika</button>
+    <button data-tab="tables" data-owner>Stolovi i QR</button>
+    <button data-tab="settings" data-owner>Postavke</button>
+    <button data-tab="stats" data-owner>Statistika</button>
+    <button data-tab="users" data-owner>Korisnici</button>
   </nav>
-  <span style="flex:1"></span><button class="b" id="logout">Odjava</button>
+  <span style="flex:1"></span><span class="muted" id="hUser"></span><button class="b" id="logout">Odjava</button>
 </header>
 <main>
   <div id="err"></div>
@@ -83,7 +86,7 @@
 
   <section data-p="menu" class="hidden">
     <div class="card"><table><thead><tr><th>Kategorija</th><th>Naziv</th><th>Cijena</th><th>PDV</th><th>Alergeni</th><th>Dostupno</th></tr></thead><tbody id="mList"></tbody></table></div>
-    <div class="card">
+    <div class="card" data-owner>
       <b>Dodaj jelo / piće</b>
       <div class="grid" style="margin-top:8px">
         <label>Kategorija<input id="mCat"></label><label>Naziv (HR)<input id="mHr"></label><label>Naziv (EN)<input id="mEn"></label><label>Naziv (DE)<input id="mDe"></label>
@@ -104,6 +107,16 @@
         <label>Min. osoba<input id="tMin" type="number" value="1"></label><label>Maks. osoba<input id="tMax" type="number" value="4"></label>
       </div>
       <p><button class="b p" id="tSave">Dodaj</button> <span id="tMsg" class="muted"></span></p>
+    </div>
+    <div class="card">
+      <b>Spojeni stolovi (za veće grupe)</b>
+      <p class="muted">Upišite stolove koji se mogu fizički spojiti. Sustav ih spaja samo kad nijedan pojedinačni stol nije slobodan. Stolovi moraju biti u istoj zoni.</p>
+      <table><thead><tr><th>Stolovi</th><th>Zona</th><th>Osoba</th><th>Aktivan</th><th></th></tr></thead><tbody id="cList"></tbody></table>
+      <div class="grid" style="margin-top:8px">
+        <label>Stolovi (oznake, zarezom)<input id="cTables" placeholder="1, 2"></label>
+        <label>Min. osoba<input id="cMin" type="number" placeholder="automatski"></label><label>Maks. osoba<input id="cMax" type="number" placeholder="zbroj"></label>
+      </div>
+      <p><button class="b p" id="cSave">Dodaj spoj</button> <span id="cMsg" class="muted"></span></p>
     </div>
     <div class="card"><b>Za web restorana</b>
       <p class="muted">Gumb za rezervaciju:</p><pre id="snipBook" style="white-space:pre-wrap"></pre>
@@ -129,6 +142,33 @@
       <p><label class="muted">Informacije za AI asistenta (parking, ljubimci, dječja stolica, vegansko…)</label><textarea id="sInfo" rows="5" style="width:100%"></textarea></p>
       <p class="muted" id="sConn"></p>
       <button class="b p" id="sSave">Spremi postavke</button> <span id="sMsg" class="muted"></span>
+    </div>
+    <div class="card">
+      <b>Kanali i plaćanje</b>
+      <div class="grid" style="margin-top:8px">
+        <label>WhatsApp Phone number ID<input id="sWa" inputmode="numeric" placeholder="npr. 106540352242922"></label>
+        <label>Instagram Business Account ID<input id="sIg" inputmode="numeric" placeholder="npr. 17841400000000000"></label>
+      </div>
+      <p class="muted">WhatsApp: Meta for Developers → WhatsApp → API Setup → <i>Phone number ID</i> (nije broj telefona). Instagram: Meta Business Suite → postavke računa. Prazno polje = kanal isključen.</p>
+      <p><button class="b p" id="sChSave">Spremi kanale</button> <span id="sChMsg" class="muted"></span></p>
+      <hr style="border:0;border-top:1px solid var(--line)">
+      <p><b>Stripe (garancija karticom)</b> · <span id="sStripe" class="tag"></span></p>
+      <p class="muted">Novac od naplate nedolazaka ide izravno na račun restorana. Klik vodi na Stripe gdje upišete podatke tvrtke i IBAN; nakon toga se vraćate ovdje.</p>
+      <p><button class="b p" id="sStripeGo">Spoji Stripe</button> <button class="b" id="sStripeCheck">Provjeri stanje</button> <span id="sStripeMsg" class="muted"></span></p>
+    </div>
+  </section>
+
+  <section data-p="users" class="hidden">
+    <div class="card"><table><thead><tr><th>Ime</th><th>Korisničko ime</th><th>Uloga</th><th>Aktivan</th><th></th></tr></thead><tbody id="uList"></tbody></table>
+      <p class="muted">Konobar vidi rezervacije, narudžbe i dostupnost jela. Vlasnik vidi i mijenja sve (postavke, stolove, meni, statistiku, korisnike).</p></div>
+    <div class="card">
+      <b>Dodaj korisnika</b>
+      <div class="grid" style="margin-top:8px">
+        <label>Ime<input id="uName" placeholder="Ana"></label><label>Korisničko ime<input id="uUser" placeholder="ana"></label>
+        <label>Lozinka (min. 8)<input id="uPass" type="password" autocomplete="new-password"></label>
+        <label>Uloga<select id="uRole"><option value="waiter">Konobar</option><option value="owner">Vlasnik</option></select></label>
+      </div>
+      <p><button class="b p" id="uSave">Dodaj</button> <span id="uMsg" class="muted"></span></p>
     </div>
   </section>
 
@@ -158,17 +198,31 @@ async function api(path, opts = {}) {
   return d;
 }
 function logout() { localStorage.removeItem('opsis-admin'); S = null; $('app').classList.add('hidden'); $('login').classList.remove('hidden'); }
-$('logout').onclick = logout;
+$('logout').onclick = async () => { try { await api('/logout', { method: 'POST', body: '{}' }); } catch {} logout(); };
+$('lByKey').onchange = () => { $('lUserRow').classList.toggle('hidden', $('lByKey').checked); $('lKey').placeholder = $('lByKey').checked ? 'ključ restorana' : 'lozinka'; };
 $('lGo').onclick = async () => {
-  S = { slug: $('lSlug').value.trim(), key: $('lKey').value.trim() };
-  try { await api('/settings'); localStorage.setItem('opsis-admin', JSON.stringify(S)); start(); }
-  catch (e) { $('lErr').textContent = e.message; S = null; }
+  $('lErr').textContent = '';
+  const slug = $('lSlug').value.trim().toLowerCase();
+  try {
+    if ($('lByKey').checked) S = { slug, key: $('lKey').value.trim() };
+    else {
+      const r = await fetch(`/api/admin/${encodeURIComponent(slug)}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: $('lUser').value.trim(), password: $('lKey').value }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || 'Prijava nije uspjela');
+      S = { slug, key: d.token };
+    }
+    const me = await api('/me'); S.role = me.role; S.name = me.name;
+    localStorage.setItem('opsis-admin', JSON.stringify(S)); $('lKey').value = ''; start();
+  } catch (e) { $('lErr').textContent = e.message; S = null; }
 };
 document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
   document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('on', x === b));
   document.querySelectorAll('section[data-p]').forEach((s) => s.classList.toggle('hidden', s.dataset.p !== b.dataset.tab));
-  ({ res: loadRes, orders: loadOrders, menu: loadMenu, tables: loadTables, settings: loadSettings, stats: loadStats })[b.dataset.tab]();
+  ({ res: loadRes, orders: loadOrders, menu: loadMenu, tables: loadTables, settings: loadSettings, stats: loadStats, users: loadUsers })[b.dataset.tab]();
 });
+const isOwner = () => S && S.role === 'owner';
+function showTab(name) { document.querySelector(`nav button[data-tab="${name}"]`).click(); }
 const guard = (fn) => async (...a) => { $('err').textContent = ''; try { await fn(...a); } catch (e) { $('err').textContent = e.message; } };
 
 // ---- rezervacije ----
@@ -249,7 +303,7 @@ const loadMenu = guard(async () => {
     <td>${esc(m.allergens.join(', '))}</td><td><input type="checkbox" data-m="${m.id}" ${m.available ? 'checked' : ''}></td></tr>`).join('');
   $('mList').querySelectorAll('[data-m]').forEach((cb) => cb.onchange = guard(async () => {
     const m = list.find((x) => x.id === Number(cb.dataset.m));
-    await api(`/menu/${m.id}`, { method: 'PUT', body: JSON.stringify({ ...m, vat_rate: Number(m.vat_rate), available: cb.checked }) });
+    await api(`/menu/${m.id}/available`, { method: 'POST', body: JSON.stringify({ available: cb.checked }) });
   }));
 });
 $('mSave').onclick = guard(async () => {
@@ -263,11 +317,34 @@ $('mSave').onclick = guard(async () => {
 });
 
 // ---- stolovi ----
+let TABLES = [];
+$('cSave').onclick = guard(async () => {
+  $('cMsg').textContent = '';
+  try {
+    const labels = $('cTables').value.split(/[,+\s]+/).map((x) => x.trim()).filter(Boolean);
+    const ids = labels.map((l) => { const t = TABLES.find((x) => x.label.toLowerCase() === l.toLowerCase()); if (!t) throw new Error(`Stol "${l}" ne postoji`); return t.id; });
+    const body = { table_ids: ids };
+    if ($('cMin').value) body.min_capacity = Number($('cMin').value);
+    if ($('cMax').value) body.max_capacity = Number($('cMax').value);
+    await api('/table-combos', { method: 'POST', body: JSON.stringify(body) });
+    ['cTables', 'cMin', 'cMax'].forEach((id) => $(id).value = ''); $('cMsg').textContent = 'Dodano.'; loadTables();
+  } catch (e) { $('cMsg').textContent = e.message; }
+});
 const loadTables = guard(async () => {
   const list = await api('/tables');
   $('tList').innerHTML = list.map((t) => `<tr><td>${esc(t.label)}</td><td>${esc(t.zone)}</td><td>${t.min_capacity}–${t.max_capacity}</td>
     <td><input type="checkbox" data-t="${t.id}" ${t.active ? 'checked' : ''}></td><td><a href="/m/${t.qr_token}" target="_blank">${location.origin}/m/${t.qr_token}</a></td></tr>`).join('');
   $('tList').querySelectorAll('[data-t]').forEach((cb) => cb.onchange = guard(() => api(`/tables/${cb.dataset.t}`, { method: 'PUT', body: JSON.stringify({ active: cb.checked }) })));
+  const combos = await api('/table-combos');
+  $('cList').innerHTML = combos.map((c) => `<tr><td>${esc(c.label)}</td><td>${esc(c.zone || '')}</td><td>${c.min_capacity}–${c.max_capacity}</td>
+    <td><input type="checkbox" data-ca="${c.id}" ${c.active ? 'checked' : ''}></td><td><button class="b" data-cd="${c.id}">Obriši</button></td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted">Nema spojenih stolova.</td></tr>';
+  $('cList').querySelectorAll('[data-ca]').forEach((cb) => cb.onchange = guard(() => api(`/table-combos/${cb.dataset.ca}`, { method: 'PUT', body: JSON.stringify({ active: cb.checked }) })));
+  $('cList').querySelectorAll('[data-cd]').forEach((b) => b.onclick = guard(async () => {
+    if (!confirm('Obrisati spoj? Postojeće rezervacije ostaju kakve jesu.')) return;
+    await api(`/table-combos/${b.dataset.cd}`, { method: 'DELETE' }); loadTables();
+  }));
+  TABLES = list;
   $('snipBook').textContent = `<script src="${location.origin}/widget.js" data-restaurant="${S.slug}" async><\/script>`;
   $('snipChat').textContent = `<script src="${location.origin}/chat.js" data-restaurant="${S.slug}" async><\/script>`;
   $('snipLink').textContent = `${location.origin}/b/${S.slug}`;
@@ -287,7 +364,51 @@ const loadSettings = guard(async () => {
   $('sGuar').value = s.guarantee_mode; $('sGuarMin').value = s.guarantee_min_party; $('sFee').value = (s.no_show_fee_cents / 100).toFixed(2);
   $('sHours').value = s.opening_hours.map((p) => `${p.weekday} ${p.open} ${p.close}`).join('\n');
   $('sClosed').value = s.closed_dates.join('\n'); $('sReview').value = s.google_review_url || ''; $('sReviewMode').value = s.review_mode; $('sInfo').value = s.info_text || '';
-  $('sConn').textContent = `Stripe: ${s.stripe_connected ? 'spojen' : 'nije spojen'} · WhatsApp: ${s.whatsapp_connected ? 'spojen' : 'nije spojen'} · Fiskalizacija: ${s.fiscal_enabled ? 'uključena' : 'isključena'}`;
+  $('sConn').textContent = `Stripe: ${STRIPE[s.stripe_status]} · WhatsApp: ${s.whatsapp_connected ? 'spojen' : 'nije spojen'} · Instagram: ${s.instagram_connected ? 'spojen' : 'nije spojen'} · Fiskalizacija: ${s.fiscal_enabled ? 'uključena' : 'isključena'}`;
+  $('sWa').value = s.whatsapp_phone_number_id || ''; $('sIg').value = s.instagram_account_id || '';
+  $('sStripe').textContent = STRIPE[s.stripe_status];
+  $('sStripeGo').textContent = s.stripe_status === 'none' ? 'Spoji Stripe' : s.stripe_status === 'pending' ? 'Nastavi postavljanje na Stripeu' : 'Uredi podatke na Stripeu';
+  $('sStripeCheck').classList.toggle('hidden', s.stripe_status === 'none');
+});
+const STRIPE = { none: 'nije spojen', pending: 'čeka podatke na Stripeu', ready: 'spojen, naplata radi' };
+$('sChSave').onclick = guard(async () => {
+  $('sChMsg').textContent = '';
+  try { await api('/settings', { method: 'PUT', body: JSON.stringify({ whatsapp_phone_number_id: $('sWa').value, instagram_account_id: $('sIg').value }) });
+    $('sChMsg').textContent = 'Spremljeno.'; loadSettings();
+  } catch (e) { $('sChMsg').textContent = e.message; }
+});
+$('sStripeGo').onclick = guard(async () => {
+  $('sStripeMsg').textContent = 'Otvaram Stripe…';
+  try { const d = await api('/stripe/onboarding', { method: 'POST', body: '{}' }); location.href = d.url; }
+  catch (e) { $('sStripeMsg').textContent = e.message; }
+});
+$('sStripeCheck').onclick = guard(async () => {
+  try { const d = await api('/stripe/refresh', { method: 'POST', body: '{}' }); $('sStripeMsg').textContent = `Stanje: ${STRIPE[d.status]}`; loadSettings(); }
+  catch (e) { $('sStripeMsg').textContent = e.message; }
+});
+
+// ---- korisnici ----
+const ROLE = { owner: 'vlasnik', waiter: 'konobar' };
+const loadUsers = guard(async () => {
+  const list = await api('/users');
+  $('uList').innerHTML = list.map((u) => `<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
+    <td><select data-ur="${u.id}"><option value="waiter" ${u.role === 'waiter' ? 'selected' : ''}>konobar</option><option value="owner" ${u.role === 'owner' ? 'selected' : ''}>vlasnik</option></select></td>
+    <td><input type="checkbox" data-ua="${u.id}" ${u.active ? 'checked' : ''}></td>
+    <td><button class="b" data-up="${u.id}">Nova lozinka</button></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Još nema korisnika — dodajte konobare ispod.</td></tr>';
+  const put = (id, body) => api(`/users/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+  $('uList').querySelectorAll('[data-ur]').forEach((el) => el.onchange = guard(async () => { await put(el.dataset.ur, { role: el.value }); loadUsers(); }));
+  $('uList').querySelectorAll('[data-ua]').forEach((el) => el.onchange = guard(async () => { await put(el.dataset.ua, { active: el.checked }); loadUsers(); }));
+  $('uList').querySelectorAll('[data-up]').forEach((el) => el.onclick = guard(async () => {
+    const p = prompt('Nova lozinka (barem 8 znakova). Korisnik će se morati ponovno prijaviti.');
+    if (p) { await put(el.dataset.up, { password: p }); alert('Lozinka promijenjena.'); }
+  }));
+});
+$('uSave').onclick = guard(async () => {
+  $('uMsg').textContent = '';
+  try {
+    await api('/users', { method: 'POST', body: JSON.stringify({ name: $('uName').value, username: $('uUser').value, password: $('uPass').value, role: $('uRole').value }) });
+    ['uName', 'uUser', 'uPass'].forEach((id) => $(id).value = ''); $('uMsg').textContent = 'Dodano.'; loadUsers();
+  } catch (e) { $('uMsg').textContent = e.message; }
 });
 $('sSave').onclick = guard(async () => {
   $('sMsg').textContent = '';
@@ -314,11 +435,22 @@ const loadStats = guard(async () => {
   $('stList').innerHTML = d.rows.map((r) => `<tr><td>${SOURCE[r.source] || esc(r.source)}</td><td>${STATUS[r.status] || r.status}</td><td>${r.n}</td><td>${r.covers}</td></tr>`).join('');
 });
 
-function start() {
+let ordersTimer = null;
+async function start() {
   $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  if (!S.role) { try { const me = await api('/me'); S.role = me.role; S.name = me.name; localStorage.setItem('opsis-admin', JSON.stringify(S)); } catch { return; } }
+  document.querySelectorAll('[data-owner]').forEach((el) => el.classList.toggle('hidden', !isOwner()));
+  $('hUser').textContent = `${S.name || ''} · ${ROLE[S.role] || ''}`;
   $('rDate').value = todayStr(); $('nDate').value = todayStr();
   loadSettings().then(loadRes); loadOrders();
-  setInterval(() => S && loadOrders(), 10_000);
+  if (!ordersTimer) ordersTimer = setInterval(() => S && loadOrders(), 10_000);
+  // povratak sa Stripe onboardinga
+  const q = new URLSearchParams(location.search);
+  if (q.get('stripe') && isOwner()) {
+    history.replaceState(null, '', location.pathname);
+    showTab('settings');
+    if (q.get('stripe') === 'refresh') $('sStripeGo').click(); else $('sStripeCheck').click();
+  }
 }
 if (S) start(); else $('login').classList.remove('hidden');
 </script>

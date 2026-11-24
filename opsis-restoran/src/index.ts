@@ -1,5 +1,5 @@
 import { createMemDb, createPgDb, migrate } from './db.js';
-import { anthropicLLM, consoleTransport, readSetupSession, realTransport, stripePayments, verifyStripeEvent } from './adapters.js';
+import { anthropicLLM, consoleTransport, readStripeEvent, realTransport, stripePayments, verifyStripeEvent } from './adapters.js';
 import { buildApp } from './server.js';
 import { startScheduler } from './jobs/scheduler.js';
 import { httpsCisSender } from './fiscal/cis.js';
@@ -7,6 +7,7 @@ import { resendFailed } from './fiscal/invoices.js';
 import { purgeOldChats } from './ai/chatbot.js';
 import type { Deps } from './deps.js';
 import { seedDemo } from './demo.js';
+import { purgeExpiredSessions } from './services/staff.js';
 
 const env = process.env;
 
@@ -39,11 +40,12 @@ async function main() {
     logger: true,
     cisSender,
     stripeWebhook: env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET
-      ? async (raw, sig) => readSetupSession(env.STRIPE_SECRET_KEY!, verifyStripeEvent(env.STRIPE_SECRET_KEY!, env.STRIPE_WEBHOOK_SECRET!, raw, sig))
+      ? async (raw, sig) => readStripeEvent(env.STRIPE_SECRET_KEY!, verifyStripeEvent(env.STRIPE_SECRET_KEY!, env.STRIPE_WEBHOOK_SECRET!, raw, sig))
       : null,
   });
 
   startScheduler(db, deps);
+  setInterval(() => purgeExpiredSessions(db, new Date()).catch(console.error), 6 * 3600_000);
   setInterval(() => purgeOldChats(db).catch(console.error), 6 * 3600_000);
   if (cisSender) setInterval(() => resendFailed(db, { send: cisSender }).catch(console.error), 10 * 60_000);
 

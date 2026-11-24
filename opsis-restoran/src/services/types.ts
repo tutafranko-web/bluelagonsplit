@@ -18,6 +18,8 @@ export interface Restaurant {
   guarantee_min_party: number;
   no_show_fee_cents: number;
   stripe_account_id: string | null;
+  /** Stripe javio da račun restorana može naplaćivati (charges_enabled). */
+  stripe_charges_enabled: boolean;
   google_review_url: string | null;
   review_mode: 'approval' | 'auto' | 'off';
   whatsapp_phone_number_id: string | null;
@@ -50,6 +52,8 @@ export interface Reservation {
   restaurant_id: number;
   guest_id: number;
   table_id: number | null;
+  /** ostali stolovi kad su stolovi spojeni */
+  extra_table_ids: number[];
   party_size: number;
   start_at: Date;
   end_at: Date;
@@ -64,6 +68,17 @@ export interface Reservation {
   review_request_sent_at: Date | null;
   review_decision: 'approved' | 'declined' | null;
 }
+
+export interface TableCombination {
+  id: number;
+  restaurant_id: number;
+  table_ids: number[];
+  min_capacity: number;
+  max_capacity: number;
+  active: boolean;
+}
+
+export type StaffRole = 'owner' | 'waiter';
 
 export class AppError extends Error {
   constructor(public status: number, public code: string, message: string) {
